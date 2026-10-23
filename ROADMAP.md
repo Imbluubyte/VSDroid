@@ -16,7 +16,7 @@
 - [ ] Repo polish: README with screenshots, release workflow (tagged APKs on GitHub Releases), issue templates
 
 ## After the public release
-- [ ] **Extension API** (very low priority). Start declarative: JSON manifests adding themes, snippets, language definitions and terminal-backed commands. Arbitrary code loading is not planned.
+- [ ] **Extension API** (very low priority). Will be similar to VSCode, this is a huge thing to implement so it'll take a while and we'll leave it until all core features are done
 
 ## Known bugs / to investigate
 - [ ] The first `dotnet run` in a brand-new C# project is very slow or appears to hang (restore/first-run work; the terminal prints nothing meanwhile). Existing, already-built projects run fine.
