@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.DataObject
 import androidx.compose.material.icons.filled.AccountTree
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -68,6 +69,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.PopupProperties
 import com.vsdroid.ide.Command
 import com.vsdroid.ide.Commands
 import com.vsdroid.ide.EditorTab
@@ -86,12 +88,12 @@ fun TitleBar(ide: IdeState, c: Commands) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(Icons.Filled.Code, null, tint = Vs.accent, modifier = Modifier.padding(horizontal = 8.dp).size(20.dp))
-        MenuButton("File", listOf(c.newFile, c.newProject, c.openFolder, null, c.save, c.saveAll, c.toggleAutoSave, null, c.closeTab, c.closeFolder, null, c.renameFile, c.openSettings))
-        MenuButton("Edit", listOf(c.comment, c.duplicate, c.deleteLine, null, c.moveUp, c.moveDown, null, c.indent, c.outdent))
-        MenuButton("View", listOf(c.palette, c.quickOpen, c.goToLine, null, c.showExplorer, c.showSearch, c.showGit, c.showEnv, null, c.toggleSidebar, c.toggleTerminal, null, c.zoomIn, c.zoomOut, c.zoomReset))
-        MenuButton("Run", listOf(c.runFile, null, c.newVenv))
-        MenuButton("Git", listOf(c.showGit, null, c.gitClone, c.gitPull, c.gitPush))
-        MenuButton("Help", listOf(c.help))
+        MenuButton(ide, "File", listOf(c.newFile, c.newProject, c.openFolder, null, c.save, c.saveAll, c.toggleAutoSave, null, c.closeTab, c.closeFolder, null, c.renameFile))
+        MenuButton(ide, "Edit", listOf(c.comment, c.duplicate, c.deleteLine, null, c.moveUp, c.moveDown, null, c.indent, c.outdent))
+        MenuButton(ide, "View", listOf(c.palette, c.quickOpen, c.goToLine, null, c.showExplorer, c.showSearch, c.showGit, c.showEnv, null, c.toggleSidebar, c.toggleTerminal, null, c.zoomIn, c.zoomOut, c.zoomReset))
+        MenuButton(ide, "Run", listOf(c.runFile, null, c.newVenv))
+        MenuButton(ide, "Git", listOf(c.showGit, null, c.gitClone, c.gitPull, c.gitPush))
+        MenuButton(ide, "Help", listOf(c.help))
 
         Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
             Row(
@@ -110,6 +112,13 @@ fun TitleBar(ide: IdeState, c: Commands) {
                 )
             }
         }
+        // Settings button
+        Box(
+            Modifier.size(34.dp).clickable { c.openSettings.run() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Filled.Settings, "Settings", tint = Vs.text, modifier = Modifier.size(20.dp))
+        }
         // Run button
         Row(
             Modifier.clickable { c.runFile.run() }.padding(horizontal = 10.dp, vertical = 4.dp),
@@ -121,15 +130,23 @@ fun TitleBar(ide: IdeState, c: Commands) {
     }
 }
 
+/** Dropdown menus don't take window focus, so Esc still reaches the activity and can close them (see Commands.dismissTopLayer). */
+internal val MenuPopup = PopupProperties(focusable = false)
+
 @Composable
-private fun MenuButton(title: String, items: List<Command?>) {
-    var open by remember { mutableStateOf(false) }
+private fun MenuButton(ide: IdeState, title: String, items: List<Command?>) {
+    val open = ide.openMenu == title
     Box {
         Text(
             title, color = Vs.text, fontSize = 13.sp,
-            modifier = Modifier.clickable { open = true }.padding(horizontal = 10.dp, vertical = 8.dp),
+            modifier = Modifier.clickable { ide.openMenu = if (open) null else title }.padding(horizontal = 10.dp, vertical = 8.dp),
         )
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }, modifier = Modifier.background(Vs.sideBarBg).width(300.dp)) {
+        DropdownMenu(
+            expanded = open,
+            onDismissRequest = { if (ide.openMenu == title) ide.openMenu = null },
+            properties = MenuPopup,
+            modifier = Modifier.background(Vs.sideBarBg).width(300.dp),
+        ) {
             items.forEach { cmd ->
                 if (cmd == null) {
                     Box(Modifier.fillMaxWidth().padding(vertical = 3.dp).height(1.dp).background(Vs.border))
@@ -142,7 +159,7 @@ private fun MenuButton(title: String, items: List<Command?>) {
                             }
                         },
                         onClick = {
-                            open = false
+                            ide.openMenu = null
                             cmd.run()
                         },
                     )
@@ -291,7 +308,6 @@ fun TerminalPanel(ide: IdeState, modifier: Modifier = Modifier) {
     val term = ide.terminal
     var input by remember { mutableStateOf("") }
     var historyIndex by remember { mutableIntStateOf(-1) }
-    var backendMenu by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
     LaunchedEffect(term.lines.size) {
@@ -331,14 +347,19 @@ fun TerminalPanel(ide: IdeState, modifier: Modifier = Modifier) {
             Box(Modifier.padding(start = 14.dp)) {
                 Text(
                     "${term.backend.label} ▾", color = Vs.text, fontSize = 12.sp,
-                    modifier = Modifier.clickable { backendMenu = true }.padding(horizontal = 6.dp, vertical = 4.dp),
+                    modifier = Modifier.clickable { ide.openMenu = "backend" }.padding(horizontal = 6.dp, vertical = 4.dp),
                 )
-                DropdownMenu(expanded = backendMenu, onDismissRequest = { backendMenu = false }, modifier = Modifier.background(Vs.sideBarBg)) {
+                DropdownMenu(
+                    expanded = ide.openMenu == "backend",
+                    onDismissRequest = { if (ide.openMenu == "backend") ide.openMenu = null },
+                    properties = MenuPopup,
+                    modifier = Modifier.background(Vs.sideBarBg),
+                ) {
                     Backend.values().forEach { b ->
                         DropdownMenuItem(
                             text = { Text(if (b == Backend.TERMUX) "Termux (full Linux tools)" else "Android shell (basic)", color = Vs.text) },
                             onClick = {
-                                backendMenu = false
+                                ide.openMenu = null
                                 ide.refreshTermuxStatus()
                                 term.switchBackend(b)
                             },

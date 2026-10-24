@@ -214,7 +214,8 @@ fun ExplorerPanel(ide: IdeState) {
 @Composable
 private fun ExplorerRow(row: TreeRow, ide: IdeState) {
     val f = row.file
-    var menu by remember { mutableStateOf(false) }
+    val menuId = "file:" + f.path
+    val menu = ide.openMenu == menuId
     val open = ide.expanded[f.path] == true
     val active = ide.selectedFile?.let { it == f } ?: (ide.activeTab?.file == f)
     Box {
@@ -228,7 +229,7 @@ private fun ExplorerRow(row: TreeRow, ide: IdeState) {
                         if (f.isDirectory) ide.expanded[f.path] = !open else ide.openFile(f)
                         ide.selectedFile = f
                     },
-                    onLongClick = { menu = true },
+                    onLongClick = { ide.openMenu = menuId },
                 )
                 .padding(start = (8 + row.depth * 14).dp, end = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -251,19 +252,24 @@ private fun ExplorerRow(row: TreeRow, ide: IdeState) {
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 6.dp),
             )
         }
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, modifier = Modifier.background(Vs.sideBarBg)) {
+        DropdownMenu(
+            expanded = menu,
+            onDismissRequest = { if (ide.openMenu == menuId) ide.openMenu = null },
+            properties = MenuPopup,
+            modifier = Modifier.background(Vs.sideBarBg),
+        ) {
             val parent = if (f.isDirectory) f else f.parentFile ?: f
             DropdownMenuItem(text = { Text("New File...", color = Vs.text) }, onClick = {
-                menu = false; ide.dialog = Dialog.NewFile(parent, false)
+                ide.openMenu = null; ide.dialog = Dialog.NewFile(parent, false)
             })
             DropdownMenuItem(text = { Text("New Folder...", color = Vs.text) }, onClick = {
-                menu = false; ide.dialog = Dialog.NewFile(parent, true)
+                ide.openMenu = null; ide.dialog = Dialog.NewFile(parent, true)
             })
             DropdownMenuItem(text = { Text("Rename...", color = Vs.text) }, onClick = {
-                menu = false; ide.dialog = Dialog.Rename(f)
+                ide.openMenu = null; ide.dialog = Dialog.Rename(f)
             })
             DropdownMenuItem(text = { Text("Delete", color = Vs.error) }, onClick = {
-                menu = false; ide.dialog = Dialog.Delete(f)
+                ide.openMenu = null; ide.dialog = Dialog.Delete(f)
             })
         }
     }

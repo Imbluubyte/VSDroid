@@ -87,6 +87,9 @@ class IdeState(
     var paletteOpen by mutableStateOf(false)
     var paletteMode by mutableStateOf(PaletteMode.COMMANDS)
     var dialog by mutableStateOf<Dialog?>(null)
+
+    /** Which dropdown menu is open (a title-bar menu name, "backend", or "file:<path>"), or null. Kept here so Esc can close it. */
+    var openMenu by mutableStateOf<String?>(null)
     var message by mutableStateOf<String?>(null)
 
     val fontSize: Float get() = settings.fontSize

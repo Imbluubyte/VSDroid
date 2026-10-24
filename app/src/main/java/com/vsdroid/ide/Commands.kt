@@ -206,6 +206,24 @@ class Commands(private val ide: IdeState) {
         }
     }
 
+    /**
+     * Closes the topmost open layer: dropdown menu, dialog, command palette, settings screen (in that order).
+     * Returns false when nothing was open. Dialogs only cancel, so nothing is ever saved or discarded by Esc.
+     */
+    fun dismissTopLayer(): Boolean {
+        when {
+            ide.openMenu != null -> ide.openMenu = null
+            ide.dialog != null -> ide.dialog = null
+            ide.paletteOpen -> ide.paletteOpen = false
+            ide.settingsOpen -> {
+                recording = null
+                ide.settingsOpen = false
+            }
+            else -> return false
+        }
+        return true
+    }
+
     /** Returns true when the key event was handled as an IDE shortcut. */
     fun handleKey(e: KeyEvent): Boolean {
         if (e.action != KeyEvent.ACTION_DOWN) return false
@@ -215,6 +233,9 @@ class Commands(private val ide: IdeState) {
             capture(rec, e, combo)
             return true
         }
+        if (combo == "Escape") return dismissTopLayer()
+        // Dialogs are overlays inside this window, so keep the editor shortcuts from firing behind them.
+        if (ide.dialog != null) return false
         val cmd = all.firstOrNull { it.shortcut.isNotEmpty() && it.shortcut.equals(combo, ignoreCase = true) }
             ?: when (combo) {
                 "Ctrl+J" -> toggleTerminal
