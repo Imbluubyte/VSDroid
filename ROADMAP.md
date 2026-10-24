@@ -2,7 +2,7 @@
 
 ## Before the public release
 - [x] **Git/GitHub tab** in the sidebar (status, stage, commit, push/pull, clone; via Termux `git`; auto `safe.directory` fix) – done, see below
-- [ ] **Consistent APK signing** (a fixed release keystore stored as a GitHub secret, so builds can update over each other)
+- [ ] **Consistent APK signing** (a fixed release keystore stored as a GitHub secret, so builds can update over each other). Build side is done (Gradle + workflow use the key when the secrets exist); still to do: create the keystore, add the 4 secrets (README, "Release signing"), and confirm two builds show the same certificate fingerprint in the Actions log
 - [ ] **Custom themes** (built-in Light, Dracula, Catppuccin Mocha etc; user themes from JSON files; theme picker in Settings)
 - [ ] **Custom templates** (user-defined project templates; ties in with the setup guide)
 - [ ] **To-Do list dropdown** per project in the top bar (stored in the project, e.g. `.vsdroid/todo.json`)
@@ -11,8 +11,8 @@
 - [ ] **First-launch setup guide**: install Termux from F-Droid ("Already installed" button), enable Termux integration, install packages for chosen languages (with skip), choose a theme, then Git/GitHub setup
 - [ ] **Browse device files to open a project** (folder picker instead of typing a path)
 - [ ] **Thorough code scan for bugs** (review pass over every file, add tests for editing logic, crash log screen)
-- [ ] **Choose a licence** – the owner wants it to be open source but not redistributed. Note: OSI "open source" licences always allow redistribution, so pick between:
-  copyleft (GPLv3/AGPL: forks allowed only under the same licence with source), a source-available licence (e.g. PolyForm Noncommercial, BSL), or a permissive licence plus trademark rules on the VSDroid name/logo.
+- [x] **Choose a licence** – decided: GPLv3 (forks allowed only under the same licence, with source)
+- [ ] **Add the GPLv3 `LICENSE` file** and a licence line in the README before the repo goes public
 - [ ] Repo polish: README with screenshots, release workflow (tagged APKs on GitHub Releases), issue templates
 
 ## After the public release

@@ -4,6 +4,14 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// Fixed signing key, so every build can be installed over the previous one. CI provides it through these
+// environment variables (see README, "Release signing"). Without them (local builds, forks, pull requests
+// from forks) the build falls back to Android's debug key and still works.
+val signingKeystore: File? = System.getenv("VSDROID_KEYSTORE_FILE")
+    ?.takeIf { it.isNotBlank() }
+    ?.let { file(it) }
+    ?.takeIf { it.isFile }
+
 android {
     namespace = "com.vsdroid.ide"
     compileSdk = 35
@@ -17,11 +25,25 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        if (signingKeystore != null) {
+            create("vsdroid") {
+                storeFile = signingKeystore
+                storePassword = System.getenv("VSDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("VSDROID_KEY_ALIAS")
+                keyPassword = System.getenv("VSDROID_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            if (signingKeystore != null) signingConfig = signingConfigs.getByName("vsdroid")
+        }
         release {
             isMinifyEnabled = false
-            // Sign release builds with the debug key so the APK is installable out of the box.
-            signingConfig = signingConfigs.getByName("debug")
+            // Fixed key when available, otherwise the debug key so the APK is installable out of the box.
+            signingConfig = signingConfigs.getByName(if (signingKeystore != null) "vsdroid" else "debug")
         }
     }
 
