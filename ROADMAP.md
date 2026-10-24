@@ -2,7 +2,7 @@
 
 ## Before the public release
 - [x] **Git/GitHub tab** in the sidebar (status, stage, commit, push/pull, clone; via Termux `git`; auto `safe.directory` fix) – done, see below
-- [ ] **Consistent APK signing** (a fixed release keystore stored as a GitHub secret, so builds can update over each other). Build side is done (Gradle + workflow use the key when the secrets exist); still to do: create the keystore, add the 4 secrets (README, "Release signing"), and confirm two builds show the same certificate fingerprint in the Actions log
+- [x] **Consistent APK signing** (a fixed release keystore stored as GitHub secrets, so builds can update over each other) – done, see below
 - [ ] **Custom themes** (built-in Light, Dracula, Catppuccin Mocha etc; user themes from JSON files; theme picker in Settings)
 - [ ] **Custom templates** (user-defined project templates; ties in with the setup guide)
 - [ ] **To-Do list dropdown** per project in the top bar (stored in the project, e.g. `.vsdroid/todo.json`)
@@ -30,4 +30,5 @@
 - Backspace removes a whole indent level; auto-close pairs are deleted together
 - Run support for Python, C#, Java, JavaScript, TypeScript, Kotlin, C/C++, Lua, shell
 - Renamed from TabCode to VSDroid
+- Fixed-key APK signing: CI signs with a keystore from GitHub secrets (setup in README, "Release signing"), falls back to the debug key without them, and checks the secret and password early with clear errors
 - Git/GitHub Source Control tab (Ctrl+Shift+G): branch and ahead/behind, stage/unstage/discard, commit, push/pull/fetch, init, add remote, clone, GitHub sign-in with a personal access token, commit identity, automatic `safe.directory` fix. Runs `git` inside Termux. Not done yet (ideas): branch switching, diffs, merge-conflict helpers, SSH keys
