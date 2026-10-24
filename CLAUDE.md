@@ -9,6 +9,7 @@ Claude is the lead developer, so make decisions, explain briefly, and keep the a
   Gradle 8.9, JDK 17, AGP 8.7.3, Kotlin 2.0.21, Compose BOM 2024.10.01, compileSdk 35, minSdk 30. Artifact: debug APK.
 - Review every edit by reading it as a compiler would (imports, nullability, name clashes). Run a quick brace/paren balance check on changed files.
 - When a build fails, read the log (`gh run view --log-failed` if available); otherwise the owner pastes it – only the `e: file:///...` lines matter.
+- Signing: `app/build.gradle.kts` uses the keystore from the `VSDROID_KEYSTORE_*` env vars when set (CI decodes it from the `VSDROID_KEYSTORE_BASE64` secret), else the debug key. Never commit a keystore or passwords; never print secrets in workflow logs.
 - Never leave the build broken on `main`. Work on a branch and let the owner merge, unless told otherwise.
 
 ## Layout (`app/src/main/java/com/vsdroid/ide/`)

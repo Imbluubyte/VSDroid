@@ -50,6 +50,30 @@ Open the Source Control tab (branch icon, or Ctrl+Shift+G). Git runs inside Term
 - Shared storage belongs to a different user than Termux, so VSDroid automatically adds each project to git's `safe.directory` list (this avoids the "dubious ownership" error).
 - Pull only fast-forwards. If your branch and the remote have diverged, VSDroid says so and you resolve it in the terminal. SSH keys, branch switching and diffs are not built in yet.
 
+## Release signing
+
+Android only installs an update over an existing app when both APKs are signed with the same key. Debug builds get a different key on every machine, so without a fixed key you would have to uninstall VSDroid before each update (and lose its data).
+
+The Build APK workflow signs with a fixed key when these repository secrets exist (Settings > Secrets and variables > Actions > New repository secret). Without them (forks, pull requests from forks) it falls back to the debug key and still builds.
+
+| Secret | Value |
+| --- | --- |
+| `VSDROID_KEYSTORE_BASE64` | the keystore file, base64-encoded (one line) |
+| `VSDROID_KEYSTORE_PASSWORD` | the keystore password |
+| `VSDROID_KEY_ALIAS` | the key alias (`vsdroid` below) |
+| `VSDROID_KEY_PASSWORD` | the key password (the same as the keystore password is fine) |
+
+Create the keystore once, on any machine with Java (in Termux: `pkg install openjdk-17`):
+
+```
+keytool -genkeypair -v -keystore vsdroid-release.jks -alias vsdroid -keyalg RSA -keysize 4096 -validity 10000
+base64 -w0 vsdroid-release.jks
+```
+
+Copy the base64 output into `VSDROID_KEYSTORE_BASE64`. **Back up `vsdroid-release.jks` and its passwords somewhere safe and private, and never commit them.** If the key is lost, users can no longer update and would have to uninstall and reinstall. Each build's Actions log prints the signing certificate fingerprint; it must be identical from build to build.
+
+Switching from the old debug-signed builds to the fixed key needs one uninstall and reinstall. After that, updates install over the top.
+
 ## Notes and limits
 
 - The terminal runs one command at a time. Programs can read input while running (Python `input()`, C# `Console.ReadLine()`, Java `Scanner`, Node `readline`): the prompt appears in the terminal and you type your answer. C, C++ and Lua only show a prompt if they flush output (`fflush(stdout)` / `io.stdout:flush()`). Ctrl+D and full-screen programs like vim are not supported.
