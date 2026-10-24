@@ -44,6 +44,7 @@ class Commands(private val ide: IdeState) {
     val toggleTerminal = Command("view.terminal", "View: Toggle Terminal", "Ctrl+`") { ide.terminalVisible = !ide.terminalVisible }
     val showExplorer = Command("view.explorer", "View: Show Explorer", "Ctrl+Shift+E") { showSide(SideView.EXPLORER) }
     val showSearch = Command("view.search", "View: Show Search", "Ctrl+Shift+F") { showSide(SideView.SEARCH) }
+    val showGit = Command("view.git", "View: Show Source Control", "Ctrl+Shift+G") { showSide(SideView.GIT) }
     val showEnv = Command("view.python", "View: Show Python Environments", "Ctrl+Shift+D") {
         if (ide.hasPython) showSide(SideView.ENV) else ide.toast("Python environments appear once the project has a .py file")
     }
@@ -75,6 +76,9 @@ class Commands(private val ide: IdeState) {
     val newVenv = Command("python.newVenv", "Python: Create Virtual Environment...") {
         if (ide.root == null) ide.toast("Open a project first") else ide.dialog = Dialog.NewVenv
     }
+    val gitClone = Command("git.clone", "Git: Clone Repository...") { ide.dialog = Dialog.GitClone }
+    val gitPull = Command("git.pull", "Git: Pull") { ide.git.pull() }
+    val gitPush = Command("git.push", "Git: Push") { ide.git.push() }
     val clearTerminal = Command("terminal.clear", "Terminal: Clear") { ide.terminal.clear() }
     val help = Command("help.shortcuts", "Help: Keyboard Shortcuts", "F1") { ide.dialog = Dialog.Help }
 
@@ -96,10 +100,10 @@ class Commands(private val ide: IdeState) {
     val all: List<Command> = listOf(
         newFile, newProject, openFolder, closeFolder, save, saveAll, closeTab, toggleAutoSave, renameFile,
         quickOpen, palette, goToLine,
-        toggleSidebar, toggleTerminal, showExplorer, showSearch, showEnv, zoomIn, zoomOut, zoomReset,
+        toggleSidebar, toggleTerminal, showExplorer, showSearch, showGit, showEnv, zoomIn, zoomOut, zoomReset,
         nextTab, prevTab,
         comment, duplicate, deleteLine, moveUp, moveDown, indent, outdent,
-        runFile, newVenv, clearTerminal, help, openSettings,
+        runFile, newVenv, gitClone, gitPull, gitPush, clearTerminal, help, openSettings,
     )
 
     /** The command whose shortcut is being recorded in Settings, or null. */

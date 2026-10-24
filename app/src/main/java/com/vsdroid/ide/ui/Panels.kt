@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.DataObject
+import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -87,8 +88,9 @@ fun TitleBar(ide: IdeState, c: Commands) {
         Icon(Icons.Filled.Code, null, tint = Vs.accent, modifier = Modifier.padding(horizontal = 8.dp).size(20.dp))
         MenuButton("File", listOf(c.newFile, c.newProject, c.openFolder, null, c.save, c.saveAll, c.toggleAutoSave, null, c.closeTab, c.closeFolder, null, c.renameFile, c.openSettings))
         MenuButton("Edit", listOf(c.comment, c.duplicate, c.deleteLine, null, c.moveUp, c.moveDown, null, c.indent, c.outdent))
-        MenuButton("View", listOf(c.palette, c.quickOpen, c.goToLine, null, c.showExplorer, c.showSearch, c.showEnv, null, c.toggleSidebar, c.toggleTerminal, null, c.zoomIn, c.zoomOut, c.zoomReset))
+        MenuButton("View", listOf(c.palette, c.quickOpen, c.goToLine, null, c.showExplorer, c.showSearch, c.showGit, c.showEnv, null, c.toggleSidebar, c.toggleTerminal, null, c.zoomIn, c.zoomOut, c.zoomReset))
         MenuButton("Run", listOf(c.runFile, null, c.newVenv))
+        MenuButton("Git", listOf(c.showGit, null, c.gitClone, c.gitPull, c.gitPush))
         MenuButton("Help", listOf(c.help))
 
         Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
@@ -160,6 +162,7 @@ fun ActivityBar(ide: IdeState, c: Commands) {
     ) {
         ActivityItem(Icons.Filled.FolderOpen, "Explorer", ide.sidebarVisible && ide.sideView == SideView.EXPLORER) { c.showExplorer.run() }
         ActivityItem(Icons.Filled.Search, "Search", ide.sidebarVisible && ide.sideView == SideView.SEARCH) { c.showSearch.run() }
+        ActivityItem(Icons.Filled.AccountTree, "Source Control", ide.sidebarVisible && ide.sideView == SideView.GIT) { c.showGit.run() }
         if (ide.hasPython) {
             ActivityItem(Icons.Filled.DataObject, "Python environments", ide.sidebarVisible && ide.sideView == SideView.ENV) { c.showEnv.run() }
         }
