@@ -33,6 +33,7 @@ object Vs {
     val warning = Color(0xFFCCA700)
     val inputBg = Color(0xFF3C3C3C)
     val popupBg = Color(0xFF252526)
+    val scrim = Color(0x66000000)
 }
 
 val CodeFont = FontFamily.Monospace

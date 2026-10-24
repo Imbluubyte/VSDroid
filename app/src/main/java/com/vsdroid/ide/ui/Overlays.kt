@@ -4,10 +4,12 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -30,7 +33,6 @@ import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
 import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -136,7 +138,7 @@ fun Palette(ide: IdeState, c: Commands) {
     BackHandler { close() }
 
     Box(
-        Modifier.fillMaxSize().background(Color(0x66000000)).clickable(onClick = ::close),
+        Modifier.fillMaxSize().background(Vs.scrim).clickable(onClick = ::close),
         contentAlignment = Alignment.TopCenter,
     ) {
         Column(
@@ -241,6 +243,48 @@ private fun DialogField(
     }
 }
 
+/**
+ * A dialog drawn inside the main window (like the command palette), not as a separate Android window.
+ * That keeps Esc and the hardware keyboard flowing through MainActivity, where Commands.dismissTopLayer
+ * can cancel it. Dialogs sit at the top centre so the on-screen keyboard never covers them.
+ */
+@Composable
+private fun DialogFrame(
+    title: String,
+    onDismiss: () -> Unit,
+    buttons: @Composable RowScope.() -> Unit,
+    content: @Composable () -> Unit,
+) {
+    BackHandler { onDismiss() }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Vs.scrim)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDismiss),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Column(
+            Modifier
+                .padding(top = 56.dp, start = 16.dp, end = 16.dp)
+                .widthIn(max = 520.dp)
+                .fillMaxWidth()
+                .background(Vs.sideBarBg, RoundedCornerShape(4.dp))
+                .border(1.dp, Vs.border, RoundedCornerShape(4.dp))
+                // Swallow taps on the panel itself so they don't reach the scrim and dismiss the dialog.
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+                .padding(20.dp),
+        ) {
+            Text(title, color = Vs.textBright, fontSize = 17.sp)
+            Spacer(Modifier.height(14.dp))
+            content()
+            Spacer(Modifier.height(16.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                buttons()
+            }
+        }
+    }
+}
+
 @Composable
 private fun VsDialog(
     title: String,
@@ -251,13 +295,13 @@ private fun VsDialog(
     dismissText: String = "Cancel",
     content: @Composable () -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = Vs.sideBarBg,
-        title = { Text(title, color = Vs.textBright, fontSize = 17.sp) },
-        text = content,
-        confirmButton = { TextButton(onClick = onConfirm) { Text(confirmText, color = confirmColor) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(dismissText, color = Vs.text) } },
+    DialogFrame(
+        title, onDismiss,
+        buttons = {
+            TextButton(onClick = onDismiss) { Text(dismissText, color = Vs.text) }
+            TextButton(onClick = onConfirm) { Text(confirmText, color = confirmColor) }
+        },
+        content = content,
     )
 }
 
@@ -292,21 +336,19 @@ fun IdeDialogs(ide: IdeState, commands: Commands) {
             )
         }
 
-        is Dialog.UnsavedClose -> AlertDialog(
-            onDismissRequest = dismiss,
-            containerColor = Vs.sideBarBg,
-            title = { Text("Save changes?", color = Vs.textBright, fontSize = 17.sp) },
-            text = { Text("\"${d.tab.file.name}\" has unsaved changes.", color = Vs.text, fontSize = 14.sp) },
-            confirmButton = { TextButton(onClick = { ide.closeTab(d.tab, saveFirst = true); dismiss() }) { Text("Save", color = Vs.accent) } },
-            dismissButton = {
-                Row {
-                    TextButton(onClick = { ide.tabs.remove(d.tab); if (ide.activeTab == d.tab) ide.activeTab = ide.tabs.lastOrNull(); dismiss() }) {
-                        Text("Don't Save", color = Vs.error)
-                    }
-                    TextButton(onClick = dismiss) { Text("Cancel", color = Vs.text) }
+        // Esc (or tapping outside) cancels and keeps the tab open, so it never loses changes.
+        is Dialog.UnsavedClose -> DialogFrame(
+            "Save changes?", dismiss,
+            buttons = {
+                TextButton(onClick = { ide.tabs.remove(d.tab); if (ide.activeTab == d.tab) ide.activeTab = ide.tabs.lastOrNull(); dismiss() }) {
+                    Text("Don't Save", color = Vs.error)
                 }
+                TextButton(onClick = dismiss) { Text("Cancel", color = Vs.text) }
+                TextButton(onClick = { ide.closeTab(d.tab, saveFirst = true); dismiss() }) { Text("Save", color = Vs.accent) }
             },
-        )
+        ) {
+            Text("\"${d.tab.file.name}\" has unsaved changes.", color = Vs.text, fontSize = 14.sp)
+        }
 
         is Dialog.NewVenv -> {
             var name by remember { mutableStateOf(".venv") }
@@ -431,27 +473,25 @@ fun IdeDialogs(ide: IdeState, commands: Commands) {
             VsDialog("Go to Line", dismiss, "Go", go) { DialogField(text, { text = it.filter(Char::isDigit) }, "Line number", go, number = true) }
         }
 
-        is Dialog.Help -> AlertDialog(
-            onDismissRequest = dismiss,
-            containerColor = Vs.sideBarBg,
-            title = { Text("Keyboard Shortcuts", color = Vs.textBright, fontSize = 17.sp) },
-            text = {
-                Column(Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState())) {
-                    commands.all.filter { it.shortcut.isNotEmpty() }.forEach { cmd ->
-                        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                            Text(cmd.title, color = Vs.text, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                            Text(cmd.shortcut, color = Vs.textBright, fontSize = 13.sp, fontFamily = CodeFont)
-                        }
+        is Dialog.Help -> DialogFrame(
+            "Keyboard Shortcuts", dismiss,
+            buttons = { TextButton(onClick = dismiss) { Text("Close", color = Vs.accent) } },
+        ) {
+            Column(Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState())) {
+                commands.all.filter { it.shortcut.isNotEmpty() }.forEach { cmd ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Text(cmd.title, color = Vs.text, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                        Text(cmd.shortcut, color = Vs.textBright, fontSize = 13.sp, fontFamily = CodeFont)
                     }
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Tab accepts the highlighted suggestion; Esc dismisses it. Shortcuts need a hardware keyboard. Change them in Settings (Ctrl+,).",
-                        color = Vs.textDim, fontSize = 12.sp,
-                    )
                 }
-            },
-            confirmButton = { TextButton(onClick = dismiss) { Text("Close", color = Vs.accent) } },
-        )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Tab accepts the highlighted suggestion; Esc dismisses it, and also closes the open menu, dialog, command palette or settings. " +
+                        "Shortcuts need a hardware keyboard. Change them in Settings (Ctrl+,).",
+                    color = Vs.textDim, fontSize = 12.sp,
+                )
+            }
+        }
     }
 }
 

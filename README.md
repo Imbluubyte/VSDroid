@@ -14,7 +14,7 @@ Kotlin + Jetpack Compose, no Electron, no WebView.
 - Python virtual environments (create, activate, delete, pip install, requirements.txt)
 - New project templates: Python, C# console / library / web API, Web, Node.js, C++ (CMake), empty
 - Source Control tab (Ctrl+Shift+G): see changes, stage/unstage/discard, commit, push, pull, fetch, initialize a repository, add a remote, clone from GitHub, sign in with a personal access token. Uses `git` inside Termux
-- Keyboard shortcuts (press F1 in the app for the full list)
+- Keyboard shortcuts (press F1 in the app for the full list); Esc closes the topmost menu, dialog, command palette or settings screen
 - Auto-indent, auto-closing brackets and quotes, comment toggle, move/duplicate/delete line
 
 Not included, by design: extensions, debugging.
@@ -89,4 +89,4 @@ Gradle 8.9, so keep Wi-Fi on. If the zip lost the executable bit, run `chmod +x 
 
 ## Settings
 
-Open with Ctrl+, (or File > Open Settings). Settings live in `VSDroid/settings.json` in shared storage; you can edit them in the Settings screen or open the file in VSDroid and save it (changes apply immediately). Keyboard shortcuts can be re-recorded there, and the shortcuts list (F1) always shows the current ones. F2 renames the selected file.
+Open with Ctrl+, or the gear button in the top bar. Settings live in `VSDroid/settings.json` in shared storage; you can edit them in the Settings screen or open the file in VSDroid and save it (changes apply immediately). Keyboard shortcuts can be re-recorded there, and the shortcuts list (F1) always shows the current ones. F2 renames the selected file.

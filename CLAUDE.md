@@ -42,7 +42,7 @@ Shortcuts are stored as `commandId -> "Ctrl+Shift+P"`. New features that need op
 - Value-based `BasicTextField` has no `softWrap`; don't pass it.
 - A Kotlin property `fontSize` plus a function `setFontSize()` clash on the JVM; name functions differently (`changeFontSize`).
 - Compose text layout lags one frame behind typing: check `layout.layoutInput.text.text == text` before `getCursorRect`/`getLineForOffset`.
-- Key events in an `AlertDialog` do not reach `Activity.dispatchKeyEvent`; screens that must record keys are overlays inside the main window (see Settings screen).
+- Key events in a separate window (`AlertDialog`, focusable `DropdownMenu`) do not reach `Activity.dispatchKeyEvent`. So dialogs are in-window overlays (`DialogFrame`/`VsDialog` in `ui/Overlays.kt`, like the palette and Settings screen), dropdown menus use `MenuPopup` (`focusable = false`) with their open state in `IdeState.openMenu`, and `Commands.dismissTopLayer()` handles Esc. Don't reintroduce `AlertDialog`; new menus should use `ide.openMenu` + `MenuPopup`.
 - When splicing code with scripts, check you haven't duplicated declarations (a duplicated `showSide` once broke the build).
 - Brace-balance checkers give false positives on char literals like `'{'`.
 

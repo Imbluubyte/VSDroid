@@ -6,8 +6,8 @@
 - [ ] **Custom themes** (built-in Light, Dracula, Catppuccin Mocha etc; user themes from JSON files; theme picker in Settings)
 - [ ] **Custom templates** (user-defined project templates; ties in with the setup guide)
 - [ ] **To-Do list dropdown** per project in the top bar (stored in the project, e.g. `.vsdroid/todo.json`)
-- [ ] **Settings button in the top bar** (its own button, out of the File menu)
-- [ ] **Esc closes the open menu/dialog**, with save prompts where needed
+- [x] **Settings button in the top bar** (its own button, out of the File menu)
+- [x] **Esc closes the open menu/dialog**, with save prompts where needed
 - [ ] **First-launch setup guide**: install Termux from F-Droid ("Already installed" button), enable Termux integration, install packages for chosen languages (with skip), choose a theme, then Git/GitHub setup
 - [ ] **Browse device files to open a project** (folder picker instead of typing a path)
 - [ ] **Thorough code scan for bugs** (review pass over every file, add tests for editing logic, crash log screen)
@@ -30,5 +30,6 @@
 - Backspace removes a whole indent level; auto-close pairs are deleted together
 - Run support for Python, C#, Java, JavaScript, TypeScript, Kotlin, C/C++, Lua, shell
 - Renamed from TabCode to VSDroid
+- Esc closes the topmost menu, dialog, command palette or settings screen (dialogs are now in-window overlays; the unsaved-changes prompt treats Esc as Cancel, so nothing is lost). Gear button for Settings in the top bar, and the General settings rows no longer carry hint text
 - Fixed-key APK signing: CI signs with a keystore from GitHub secrets (setup in README, "Release signing"), falls back to the debug key without them, and checks the secret and password early with clear errors
 - Git/GitHub Source Control tab (Ctrl+Shift+G): branch and ahead/behind, stage/unstage/discard, commit, push/pull/fetch, init, add remote, clone, GitHub sign-in with a personal access token, commit identity, automatic `safe.directory` fix. Runs `git` inside Termux. Not done yet (ideas): branch switching, diffs, merge-conflict helpers, SSH keys

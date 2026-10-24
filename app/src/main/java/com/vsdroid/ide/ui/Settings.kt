@@ -51,18 +51,18 @@ fun SettingsScreen(ide: IdeState, c: Commands) {
             ) {
                 Column(Modifier.widthIn(max = 720.dp)) {
                     SectionTitle("General")
-                    SettingRow("Editor font size", "Also changed with Ctrl+= and Ctrl+-") {
+                    SettingRow("Editor font size") {
                         MiniButton("−") { ide.changeFontSize(ide.fontSize - 1f) }
                         Text("${ide.fontSize.toInt()}", color = Vs.textBright, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 12.dp))
                         MiniButton("+") { ide.changeFontSize(ide.fontSize + 1f) }
                     }
-                    SettingRow("Auto save", "Save files automatically while you type") {
+                    SettingRow("Auto save") {
                         Switch(checked = s.autoSave, onCheckedChange = { s.autoSave = it; s.save() })
                     }
-                    SettingRow("Auto-close brackets and quotes", "Typing ( or \" inserts the matching closer") {
+                    SettingRow("Auto-close brackets and quotes") {
                         Switch(checked = s.autoClosePairs, onCheckedChange = { s.autoClosePairs = it; s.save() })
                     }
-                    SettingRow("Show terminal on startup", null) {
+                    SettingRow("Show terminal on startup") {
                         Switch(checked = s.terminalOnStart, onCheckedChange = { s.terminalOnStart = it; s.save() })
                     }
 
@@ -104,12 +104,9 @@ private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun SettingRow(title: String, hint: String?, control: @Composable () -> Unit) {
+private fun SettingRow(title: String, control: @Composable () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(title, color = Vs.text, fontSize = 14.sp)
-            if (hint != null) Text(hint, color = Vs.textDim, fontSize = 12.sp)
-        }
+        Text(title, color = Vs.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
         control()
     }
 }
