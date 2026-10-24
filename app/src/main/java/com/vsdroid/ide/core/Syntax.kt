@@ -6,16 +6,16 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 
-/** VS Code "Dark+" token colours. */
+/** Token colours of the active theme (see [ThemeKey]); read on every highlight so a theme switch applies. */
 object SyntaxColors {
-    val keyword = Color(0xFF569CD6)
-    val control = Color(0xFFC586C0)
-    val string = Color(0xFFCE9178)
-    val comment = Color(0xFF6A9955)
-    val number = Color(0xFFB5CEA8)
-    val function = Color(0xFFDCDCAA)
-    val type = Color(0xFF4EC9B0)
-    val variable = Color(0xFF9CDCFE)
+    val keyword: Color get() = ThemeManager.current[ThemeKey.SyntaxKeyword]
+    val control: Color get() = ThemeManager.current[ThemeKey.SyntaxControl]
+    val string: Color get() = ThemeManager.current[ThemeKey.SyntaxString]
+    val comment: Color get() = ThemeManager.current[ThemeKey.SyntaxComment]
+    val number: Color get() = ThemeManager.current[ThemeKey.SyntaxNumber]
+    val function: Color get() = ThemeManager.current[ThemeKey.SyntaxFunction]
+    val type: Color get() = ThemeManager.current[ThemeKey.SyntaxType]
+    val variable: Color get() = ThemeManager.current[ThemeKey.SyntaxVariable]
 }
 
 object Syntax {

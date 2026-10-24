@@ -49,9 +49,9 @@ import com.vsdroid.ide.IdeState
 import com.vsdroid.ide.core.GitChange
 import com.vsdroid.ide.core.GitPhase
 
-private val GitGreen = Color(0xFF89D185)
-private val GitYellow = Color(0xFFE2C08D)
-private val GitRed = Color(0xFFC74E39)
+private val GitGreen get() = Vs.success
+private val GitYellow get() = Vs.modified
+private val GitRed get() = Vs.danger
 
 @Composable
 fun GitPanel(ide: IdeState) {
@@ -215,7 +215,7 @@ private fun GroupHeader(title: String, count: Int, action: String?, onAction: ()
                 modifier = Modifier.clickable(onClick = onAction).padding(horizontal = 8.dp, vertical = 8.dp),
             )
         }
-        Text("$count", color = Vs.textBright, fontSize = 11.sp, modifier = Modifier.background(Vs.accent, RoundedCornerShape(8.dp)).padding(horizontal = 6.dp, vertical = 1.dp))
+        Text("$count", color = Color.White, fontSize = 11.sp, modifier = Modifier.background(Vs.accent, RoundedCornerShape(8.dp)).padding(horizontal = 6.dp, vertical = 1.dp))
     }
 }
 

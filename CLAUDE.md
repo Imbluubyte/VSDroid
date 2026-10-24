@@ -17,9 +17,9 @@ Claude is the lead developer, so make decisions, explain briefly, and keep the a
 - `IdeState.kt` – all app state (tabs, project, search, python envs/packages, dialogs). `Dialog` sealed class lives here.
 - `Commands.kt` – every action as a `Command(id, title, defaultShortcut)`; shortcuts are rebindable (state in `Command.shortcut`).
 - `core/` – no UI: `Languages`, `Syntax`, `Completion`, `Search`, `Templates`, `EditorOps` (auto-indent, auto-close, backspace rules),
-  `Settings` (settings.json), `TerminalSession`, `TermuxBridge`, `Venv`, `PackageIndex`,
+  `Settings` (settings.json), `Themes` (theme keys, built-in Dark/Light, JSON parsing/validation, `ThemeManager` state), `TerminalSession`, `TermuxBridge`, `Venv`, `PackageIndex`,
   `Git` (pure Kotlin: shell-script builders + `git status` parser, no Android; tested against real git), `GitState` (Source Control state/actions, runs the scripts via `TermuxBridge`).
-- `ui/` – `Editor`, `Sidebar` (explorer/search/env/package browser), `GitPanel` (Source Control tab), `Panels` (title bar, tabs, terminal, status bar), `Overlays` (palette + dialogs), `Settings` (settings screen), `Theme` (`Vs` colour object).
+- `ui/` – `Editor`, `Sidebar` (explorer/search/env/package browser), `GitPanel` (Source Control tab), `Panels` (title bar, tabs, terminal, status bar), `Overlays` (palette + dialogs), `Settings` (settings window with tabs), `Theme` (`Vs` colour object, reads the active theme).
 
 ## Settings
 `VSDroid/settings.json` in shared storage (`AppSettings`). Edited via the Settings screen (Ctrl+,) or by opening the file in VSDroid; saving it in the editor reloads it.
@@ -48,7 +48,7 @@ Shortcuts are stored as `commandId -> "Ctrl+Shift+P"`. New features that need op
 
 ## Conventions
 - Keep UI text free of device-specific wording (no tablet model names).
-- Dark+ style colours come from `Vs` in `ui/Theme.kt`; don't hard-code colours elsewhere (themes are planned).
+- All colours come from `Vs` in `ui/Theme.kt` (and `SyntaxColors`), which read the active theme (`ThemeManager.current`). Don't hard-code colours; add a `ThemeKey` (with dark and light defaults) in `core/Themes.kt` and a `Vs` getter instead. Anything that caches a colour in `remember` must key on `ThemeManager.current`. White text on the accent colour (status bar, buttons) is the one allowed `Color.White`.
 - Prefer small, self-contained files in `core/` that don't depend on Android where possible (easier to test).
 - Update `README.md` and `ROADMAP.md` when behaviour or plans change.
 - Commit messages: short imperative summary. Claude adds its Co-Authored-By trailer.
