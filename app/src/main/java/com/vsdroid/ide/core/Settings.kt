@@ -17,6 +17,9 @@ class AppSettings(val file: File) {
     var autoClosePairs by mutableStateOf(true)
     var terminalOnStart by mutableStateOf(false)
 
+    /** Id of the active theme: "dark", "light", or the file name of a theme in the themes folder. */
+    var theme by mutableStateOf("dark")
+
     /** Command id to shortcut, e.g. "file.save" to "Ctrl+S". A missing id uses the command's default. */
     val keybindings = mutableStateMapOf<String, String>()
 
@@ -29,6 +32,7 @@ class AppSettings(val file: File) {
             autoSave = o.optBoolean("autoSave", autoSave)
             autoClosePairs = o.optBoolean("autoClosePairs", autoClosePairs)
             terminalOnStart = o.optBoolean("terminalOnStart", terminalOnStart)
+            theme = o.optString("theme", theme).ifBlank { "dark" }
             keybindings.clear()
             o.optJSONObject("keybindings")?.let { kb ->
                 val keys = kb.keys()
@@ -51,6 +55,7 @@ class AppSettings(val file: File) {
             o.put("autoSave", autoSave)
             o.put("autoClosePairs", autoClosePairs)
             o.put("terminalOnStart", terminalOnStart)
+            o.put("theme", theme)
             val kb = JSONObject()
             keybindings.toSortedMap().forEach { (k, v) -> kb.put(k, v) }
             o.put("keybindings", kb)

@@ -484,12 +484,6 @@ fun IdeDialogs(ide: IdeState, commands: Commands) {
                         Text(cmd.shortcut, color = Vs.textBright, fontSize = 13.sp, fontFamily = CodeFont)
                     }
                 }
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "Tab accepts the highlighted suggestion; Esc dismisses it, and also closes the open menu, dialog, command palette or settings. " +
-                        "Shortcuts need a hardware keyboard. Change them in Settings (Ctrl+,).",
-                    color = Vs.textDim, fontSize = 12.sp,
-                )
             }
         }
     }

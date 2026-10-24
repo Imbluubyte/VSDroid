@@ -17,6 +17,9 @@ import com.vsdroid.ide.core.Languages
 import com.vsdroid.ide.core.SearchHit
 import com.vsdroid.ide.core.Searcher
 import com.vsdroid.ide.core.TerminalSession
+import com.vsdroid.ide.core.ThemeException
+import com.vsdroid.ide.core.ThemeManager
+import com.vsdroid.ide.core.Themes
 import com.vsdroid.ide.core.VenvInfo
 import com.vsdroid.ide.core.PackageIndex
 import com.vsdroid.ide.core.TermuxBridge
@@ -69,6 +72,9 @@ class IdeState(
 
     val settings = AppSettings(File(Environment.getExternalStorageDirectory(), "VSDroid/settings.json"))
     private val settingsError = settings.load()
+
+    /** Theme files live in a "themes" folder next to settings.json. */
+    private val themeErrors = ThemeManager.load(File(settings.file.parentFile, "themes"), settings.theme)
 
     /** Folder that holds all projects ("workspace"). */
     val workspace: File = File(Environment.getExternalStorageDirectory(), "VSDroidProjects").also { it.mkdirs() }
@@ -141,7 +147,8 @@ class IdeState(
         terminal = TerminalSession(context, scope, workspace)
         // Commands typed in the terminal may be git commands, so keep the Source Control tab current.
         terminal.onFinished = { if (sidebarVisible && sideView == SideView.GIT) git.refresh() }
-        settingsError?.let { toast(it) }
+        (settingsError ?: themeErrors.entries.firstOrNull()?.let { "Theme ${it.key} was not loaded: ${it.value}" })
+            ?.let { toast(it) }
         prefs.getString("lastRoot", null)?.let { File(it) }?.takeIf { it.isDirectory }?.let { openFolder(it) }
     }
 
@@ -268,6 +275,9 @@ class IdeState(
             t.file.writeText(t.value.text)
             t.savedText = t.value.text
             if (t.file.absolutePath == settings.file.absolutePath) reloadSettings()
+            if (t.file.extension.equals("json", ignoreCase = true) && t.file.parentFile?.absolutePath == ThemeManager.dir?.absolutePath) {
+                themeFileSaved(t.file)
+            }
         } catch (e: Exception) {
             toast("Save failed: ${e.message}")
         }
@@ -276,8 +286,81 @@ class IdeState(
     fun reloadSettings() {
         val err = settings.load()
         if (err != null) toast(err) else toast("Settings reloaded")
+        ThemeManager.select(settings.theme)
         onSettingsReloaded()
     }
+
+    // ---- themes --------------------------------------------------------------------------------
+
+    /** Message under the theme buttons in Settings > Appearance (import results and errors). */
+    var themeStatus by mutableStateOf<String?>(null)
+        private set
+    var themeStatusIsError by mutableStateOf(false)
+        private set
+
+    /** Set by MainActivity: opens the system file picker; the chosen file comes back through [importTheme]. */
+    var onRequestImportTheme: () -> Unit = {}
+
+    private fun themeNote(msg: String, error: Boolean) {
+        themeStatus = msg
+        themeStatusIsError = error
+        toast(msg)
+    }
+
+    fun selectTheme(id: String) {
+        val t = ThemeManager.select(id)
+        settings.theme = t.id
+        settings.save()
+        themeStatus = null
+    }
+
+    fun reloadThemes() {
+        val first = ThemeManager.reload().entries.firstOrNull()
+        if (first != null) themeNote("${first.key}: ${first.value}", true) else themeNote("Themes reloaded", false)
+    }
+
+    /** A theme file was saved in the editor: re-read it so the change shows immediately. */
+    private fun themeFileSaved(file: File) {
+        val err = ThemeManager.reload()[file.name]
+        if (err != null) toast("Theme not applied: $err")
+    }
+
+    /** Writes a template theme file, selects it and opens it in the editor (saving it previews the changes). */
+    fun createTheme() {
+        val dir = ThemeManager.dir ?: return
+        try {
+            dir.mkdirs()
+            val file = Themes.uniqueFile(dir, "my-theme")
+            file.writeText(Themes.template(file.nameWithoutExtension))
+            ThemeManager.reload()
+            selectTheme(file.name)
+            settingsOpen = false
+            openFile(file)
+            toast("New theme created. Edit the colours and save to see them.")
+        } catch (e: Exception) {
+            themeNote("Could not create a theme file: ${e.message}", true)
+        }
+    }
+
+    /** Called with the contents of a file the user picked. Anything that is not a valid theme is rejected and nothing is written. */
+    fun importTheme(displayName: String, text: String) {
+        val dir = ThemeManager.dir ?: return
+        try {
+            val file = Themes.uniqueFile(dir, displayName.substringBeforeLast('.'))
+            Themes.parse(text, file.name)
+            dir.mkdirs()
+            file.writeText(text)
+            ThemeManager.reload()
+            selectTheme(file.name)
+            themeNote("Imported theme \"${ThemeManager.current.name}\"", false)
+        } catch (e: ThemeException) {
+            themeNote("Can't import this file: ${e.message}", true)
+        } catch (e: Exception) {
+            themeNote("Could not import the file: ${e.message}", true)
+        }
+    }
+
+    fun importFailed(message: String) = themeNote(message, true)
 
     fun saveAll() = tabs.filter { it.dirty }.forEach { save(it) }
 
@@ -450,6 +533,9 @@ class IdeState(
     }
 
     // ---- running -----------------------------------------------------------------------------
+
+    /** True when the open file's language has a run command; the title-bar Run button is only shown then. */
+    val canRun: Boolean get() = activeTab?.language?.runTemplate != null
 
     fun runCurrentFile() {
         val tab = activeTab

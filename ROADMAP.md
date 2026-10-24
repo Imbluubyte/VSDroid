@@ -3,7 +3,7 @@
 ## Before the public release
 - [x] **Git/GitHub tab** in the sidebar (status, stage, commit, push/pull, clone; via Termux `git`; auto `safe.directory` fix) – done, see below
 - [x] **Consistent APK signing** (a fixed release keystore stored as GitHub secrets, so builds can update over each other) – done, see below
-- [ ] **Custom themes** (built-in Light, Dracula, Catppuccin Mocha etc; user themes from JSON files; theme picker in Settings)
+- [x] **Custom themes**: built-in Light, user themes from JSON files, theme picker + create/import in Settings > Appearance – done. Not done yet (ideas): bundled Dracula / Catppuccin Mocha theme files
 - [ ] **Custom templates** (user-defined project templates; ties in with the setup guide)
 - [ ] **To-Do list dropdown** per project in the top bar (stored in the project, e.g. `.vsdroid/todo.json`)
 - [x] **Settings button in the top bar** (its own button, out of the File menu)
@@ -26,10 +26,11 @@
 - Termux or Android-shell terminal with interactive input (`input()`, `Console.ReadLine()`, ...)
 - Python venvs and a package browser (shown only for projects containing .py files)
 - Project templates (C# template uses `class Program` / `Main`)
-- Settings screen + `settings.json`, rebindable keyboard shortcuts, F1 shortcut list, F2 rename
+- Settings window (General / Keybinds / Appearance tabs) + `settings.json`, rebindable keyboard shortcuts, F1 shortcut list, F2 rename
 - Backspace removes a whole indent level; auto-close pairs are deleted together
 - Run support for Python, C#, Java, JavaScript, TypeScript, Kotlin, C/C++, Lua, shell
 - Renamed from TabCode to VSDroid
 - Esc closes the topmost menu, dialog, command palette or settings screen (dialogs are now in-window overlays; the unsaved-changes prompt treats Esc as Cancel, so nothing is lost). Gear button for Settings in the top bar, and the General settings rows no longer carry hint text
 - Fixed-key APK signing: CI signs with a keystore from GitHub secrets (setup in README, "Release signing"), falls back to the debug key without them, and checks the secret and password early with clear errors
 - Git/GitHub Source Control tab (Ctrl+Shift+G): branch and ahead/behind, stage/unstage/discard, commit, push/pull/fetch, init, add remote, clone, GitHub sign-in with a personal access token, commit identity, automatic `safe.directory` fix. Runs `git` inside Termux. Not done yet (ideas): branch switching, diffs, merge-conflict helpers, SSH keys
+- Visuals update: Settings is a floating window with a tab list and an X close icon; Appearance tab with Dark/Light themes, user JSON themes (new from template, import with validation); the Run button is an icon-only button shown only when the open file can be run; F1 shortcut list no longer has a footer note

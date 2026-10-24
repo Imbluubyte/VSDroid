@@ -4,7 +4,9 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.graphics.drawable.ColorDrawable
 import android.os.Environment
+import android.provider.OpenableColumns
 import android.provider.Settings
 import android.view.KeyEvent
 import android.view.WindowManager
@@ -28,6 +30,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,13 +38,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.vsdroid.ide.core.ThemeKey
+import com.vsdroid.ide.core.ThemeManager
+import com.vsdroid.ide.core.Themes
 import com.vsdroid.ide.core.TermuxBridge
 import com.vsdroid.ide.ui.ActivityBar
 import com.vsdroid.ide.ui.Breadcrumb
@@ -73,15 +81,54 @@ class MainActivity : ComponentActivity() {
             ideRef?.refreshTermuxStatus()
         }
 
+    /** System file manager for "Import theme". Any file type is allowed; the content is validated afterwards. */
+    private val themePicker =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri != null) importThemeFrom(uri)
+        }
+
+    private fun importThemeFrom(uri: Uri) {
+        val ide = ideRef ?: return
+        try {
+            val name = contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
+                if (it.moveToFirst()) it.getString(0) else null
+            } ?: "theme.json"
+            val bytes = contentResolver.openInputStream(uri)?.use { Themes.readLimited(it) }
+            if (bytes == null) {
+                ide.importFailed("Can't import this file: it is too large to be a theme")
+                return
+            }
+            ide.importTheme(name, String(bytes, Charsets.UTF_8))
+        } catch (e: Exception) {
+            ide.importFailed("Could not read that file: ${e.message ?: "unknown error"}")
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         setContent {
             VSDroidTheme {
+                SystemBarsFollowTheme()
                 Box(Modifier.fillMaxSize().background(Vs.editorBg).statusBarsPadding().navigationBarsPadding()) {
                     Root()
                 }
             }
+        }
+    }
+
+    /** Keeps the window background and status/navigation bars in step with the active theme. */
+    @Suppress("DEPRECATION")
+    @Composable
+    private fun SystemBarsFollowTheme() {
+        val theme = ThemeManager.current
+        SideEffect {
+            window.statusBarColor = theme[ThemeKey.TitleBarBg].toArgb()
+            window.navigationBarColor = theme[ThemeKey.StatusBarBg].toArgb()
+            window.setBackgroundDrawable(ColorDrawable(theme[ThemeKey.EditorBg].toArgb()))
+            val controller = WindowCompat.getInsetsController(window, window.decorView)
+            controller.isAppearanceLightStatusBars = !theme.dark
+            controller.isAppearanceLightNavigationBars = false
         }
     }
 
@@ -121,6 +168,7 @@ class MainActivity : ComponentActivity() {
         val cmds = remember { Commands(ide) }
         ideRef = ide
         commands = cmds
+        ide.onRequestImportTheme = { themePicker.launch(arrayOf("*/*")) }
         ide.onRequestTermuxPermission = {
             if (TermuxBridge.isInstalled(this)) termuxPermission.launch(TermuxBridge.PERMISSION)
             else ide.toast("Termux is not installed")

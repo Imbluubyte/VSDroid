@@ -90,3 +90,21 @@ Gradle 8.9, so keep Wi-Fi on. If the zip lost the executable bit, run `chmod +x 
 ## Settings
 
 Open with Ctrl+, or the gear button in the top bar. Settings live in `VSDroid/settings.json` in shared storage; you can edit them in the Settings screen or open the file in VSDroid and save it (changes apply immediately). Keyboard shortcuts can be re-recorded there, and the shortcuts list (F1) always shows the current ones. F2 renames the selected file.
+
+### Themes
+
+Pick a theme in Settings > Appearance. VSDroid ships with **Dark** (default) and **Light**. Your own themes are JSON files in `VSDroid/themes/` next to `settings.json`:
+
+- **New theme** creates a template file there (every colour listed, starting from the dark theme), selects it and opens it. Edit the colours and save: the change applies immediately.
+- **Import theme...** opens the system file manager. A file that is not valid JSON, has a bad colour value, or sets no theme colours is rejected with a message, and nothing is installed.
+
+```json
+{
+  "name": "My Theme",
+  "base": "light",
+  "colors": { "accent": "#C586C0", "editorBg": "#FAFAFA" },
+  "syntax": { "keyword": "#0000FF", "string": "#A31515" }
+}
+```
+
+`base` is `dark` or `light`; any colour you leave out comes from that base, so a theme can be just a few lines. Colours are `#RRGGBB` or `#AARRGGBB`. The full list of names is in the template file.

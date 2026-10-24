@@ -532,7 +532,7 @@ private fun PackageRow(ide: IdeState, p: PackageInfo) {
         Spacer(Modifier.width(8.dp))
         when (state) {
             PkgState.INSTALLING -> Text("Installing...", color = Vs.warning, fontSize = 12.sp)
-            PkgState.INSTALLED -> Text("✓ Installed", color = Color(0xFF89D185), fontSize = 12.sp)
+            PkgState.INSTALLED -> Text("✓ Installed", color = Vs.success, fontSize = 12.sp)
             else -> Text(
                 if (state == PkgState.FAILED) "Retry" else "Install",
                 color = Color.White, fontSize = 12.sp,

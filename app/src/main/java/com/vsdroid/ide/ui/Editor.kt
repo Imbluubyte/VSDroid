@@ -59,6 +59,7 @@ import com.vsdroid.ide.IdeState
 import com.vsdroid.ide.core.Completion
 import com.vsdroid.ide.core.EditorOps
 import com.vsdroid.ide.core.Syntax
+import com.vsdroid.ide.core.ThemeManager
 import kotlin.math.roundToInt
 
 private class SyntaxTransformation(private val tab: EditorTab) : VisualTransformation {
@@ -83,12 +84,12 @@ private class SyntaxTransformation(private val tab: EditorTab) : VisualTransform
 @Composable
 fun CodeEditor(tab: EditorTab, ide: IdeState, modifier: Modifier = Modifier) {
     val density = LocalDensity.current
-    val style = remember(ide.fontSize) { codeStyle(ide.fontSize) }
+    val style = remember(ide.fontSize, ThemeManager.current) { codeStyle(ide.fontSize) }
     val lineHeightPx = with(density) { (ide.fontSize * 1.45f).sp.toPx() }
     val vScroll = rememberScrollState()
     val hScroll = rememberScrollState()
     val focus = remember { FocusRequester() }
-    val transformation = remember(tab) { SyntaxTransformation(tab) }
+    val transformation = remember(tab, ThemeManager.current) { SyntaxTransformation(tab) }
 
     var layout by remember(tab) { mutableStateOf<TextLayoutResult?>(null) }
     var selectedSuggestion by remember(tab) { mutableIntStateOf(0) }
@@ -152,7 +153,7 @@ fun CodeEditor(tab: EditorTab, ide: IdeState, modifier: Modifier = Modifier) {
                             val line = l.getLineForOffset(cursor)
                             val top = l.getLineTop(line) + 4.dp.toPx()
                             drawRect(
-                                color = androidx.compose.ui.graphics.Color(0x14FFFFFF),
+                                color = Vs.lineHighlight,
                                 topLeft = Offset(0f, top),
                                 size = Size(size.width, l.getLineBottom(line) - l.getLineTop(line)),
                             )

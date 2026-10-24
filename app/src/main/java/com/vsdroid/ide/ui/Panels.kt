@@ -119,13 +119,14 @@ fun TitleBar(ide: IdeState, c: Commands) {
         ) {
             Icon(Icons.Filled.Settings, "Settings", tint = Vs.text, modifier = Modifier.size(20.dp))
         }
-        // Run button
-        Row(
-            Modifier.clickable { c.runFile.run() }.padding(horizontal = 10.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(Icons.Filled.PlayArrow, "Run", tint = Color(0xFF89D185), modifier = Modifier.size(20.dp))
-            Text("Run", color = Vs.text, fontSize = 12.sp, modifier = Modifier.padding(start = 2.dp))
+        // Run button: icon only, and only while the open file can be run
+        if (ide.canRun) {
+            Box(
+                Modifier.size(34.dp).clickable { c.runFile.run() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Filled.PlayArrow, "Run", tint = Vs.textBright, modifier = Modifier.size(22.dp))
+            }
         }
     }
 }
@@ -194,8 +195,8 @@ private fun ActivityItem(icon: ImageVector, desc: String, selected: Boolean, onC
         Modifier.fillMaxWidth().height(52.dp).clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        if (selected) Box(Modifier.align(Alignment.CenterStart).width(2.dp).height(28.dp).background(Color.White))
-        Icon(icon, desc, tint = if (selected) Color.White else Vs.textDim, modifier = Modifier.size(26.dp))
+        if (selected) Box(Modifier.align(Alignment.CenterStart).width(2.dp).height(28.dp).background(Vs.activityBarFgActive))
+        Icon(icon, desc, tint = if (selected) Vs.activityBarFgActive else Vs.activityBarFg, modifier = Modifier.size(26.dp))
     }
 }
 
@@ -369,7 +370,7 @@ fun TerminalPanel(ide: IdeState, modifier: Modifier = Modifier) {
             }
             term.activeVenv?.let {
                 Text(
-                    "venv: ${java.io.File(it).name}", color = Color(0xFF89D185), fontSize = 12.sp,
+                    "venv: ${java.io.File(it).name}", color = Vs.success, fontSize = 12.sp,
                     modifier = Modifier.padding(start = 8.dp),
                 )
             }
@@ -401,7 +402,7 @@ fun TerminalPanel(ide: IdeState, modifier: Modifier = Modifier) {
                 Text(
                     l.text.ifEmpty { " " },
                     color = when (l.kind) {
-                        LineKind.INPUT -> Color(0xFF89D185)
+                        LineKind.INPUT -> Vs.success
                         LineKind.ERROR -> Vs.error
                         LineKind.INFO -> Vs.textDim
                         LineKind.OUTPUT -> Vs.text
@@ -418,7 +419,7 @@ fun TerminalPanel(ide: IdeState, modifier: Modifier = Modifier) {
             // While a program runs, show whatever it printed without a newline (e.g. "Enter x: ") as the prompt.
             Text(
                 if (term.running) term.partial.ifEmpty { "›" } else term.prompt(),
-                color = Color(0xFF89D185), fontFamily = CodeFont, fontSize = 13.sp,
+                color = Vs.success, fontFamily = CodeFont, fontSize = 13.sp,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.widthIn(max = 320.dp),
             )
