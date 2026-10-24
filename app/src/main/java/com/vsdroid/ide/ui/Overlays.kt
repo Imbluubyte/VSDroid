@@ -56,7 +56,9 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -209,9 +211,11 @@ private fun DialogField(
     label: String,
     onSubmit: () -> Unit,
     number: Boolean = false,
+    autoFocus: Boolean = true,
+    secret: Boolean = false,
 ) {
     val focus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focus.requestFocus() }
+    LaunchedEffect(Unit) { if (autoFocus) focus.requestFocus() }
     Column {
         Text(label, color = Vs.textDim, fontSize = 12.sp)
         Spacer(Modifier.height(4.dp))
@@ -226,6 +230,7 @@ private fun DialogField(
                 keyboardType = if (number) androidx.compose.ui.text.input.KeyboardType.Number else androidx.compose.ui.text.input.KeyboardType.Text,
             ),
             keyboardActions = KeyboardActions(onDone = { onSubmit() }),
+            visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Vs.inputBg, RoundedCornerShape(2.dp))
@@ -341,6 +346,83 @@ fun IdeDialogs(ide: IdeState, commands: Commands) {
                     }
                 }
             }
+        }
+
+        is Dialog.GitClone -> {
+            var url by remember { mutableStateOf("") }
+            var folder by remember { mutableStateOf("") }
+            val go = {
+                if (url.isNotBlank() && ide.git.clone(url, folder) { dir -> ide.openFolder(dir) }) dismiss()
+            }
+            VsDialog("Clone Repository", dismiss, "Clone", go) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.width(420.dp)) {
+                    DialogField(url, { url = it }, "Repository address (https://github.com/user/repo or user/repo)", go)
+                    DialogField(folder, { folder = it }, "Folder name (optional)", go, autoFocus = false)
+                    Text(
+                        "Clones into ${ide.workspace.name} using git in Termux. For private repositories, sign in to GitHub first.",
+                        color = Vs.textDim, fontSize = 12.sp,
+                    )
+                }
+            }
+        }
+
+        is Dialog.GitSignIn -> {
+            var user by remember { mutableStateOf(ide.git.githubUser ?: "") }
+            var token by remember { mutableStateOf("") }
+            val go = { if (ide.git.signIn(user, token)) dismiss() }
+            VsDialog("Sign in to GitHub", dismiss, "Sign in", go) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.width(420.dp)) {
+                    DialogField(user, { user = it }, "GitHub username", go)
+                    DialogField(token, { token = it }, "Personal access token", go, autoFocus = false, secret = true)
+                    Text(
+                        "Create a token on github.com under Settings > Developer settings > Personal access tokens, " +
+                            "with the \"repo\" permission. It is stored only in Termux's private home folder " +
+                            "(~/.git-credentials), never inside VSDroid's settings or your projects.",
+                        color = Vs.textDim, fontSize = 12.sp,
+                    )
+                }
+            }
+        }
+
+        is Dialog.GitIdentity -> {
+            var name by remember { mutableStateOf(ide.git.userName) }
+            var email by remember { mutableStateOf(ide.git.userEmail) }
+            val go = { if (ide.git.setIdentity(name, email)) dismiss() }
+            VsDialog("Commit identity", dismiss, "Save", go) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.width(420.dp)) {
+                    DialogField(name, { name = it }, "Your name", go)
+                    DialogField(email, { email = it }, "Your email", go, autoFocus = false)
+                    Text(
+                        "Saved globally (git config --global) and used for every commit you make. " +
+                            "Use the email on your GitHub account so commits are linked to you.",
+                        color = Vs.textDim, fontSize = 12.sp,
+                    )
+                }
+            }
+        }
+
+        is Dialog.GitAddRemote -> {
+            var url by remember { mutableStateOf("") }
+            val go = { if (url.isNotBlank() && ide.git.addRemote(url)) dismiss() }
+            VsDialog("Add Remote", dismiss, "Add", go) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.width(420.dp)) {
+                    DialogField(url, { url = it }, "Repository address (https://github.com/user/repo or user/repo)", go)
+                    Text(
+                        "Creates the remote \"origin\". Create the empty repository on github.com first, then Push.",
+                        color = Vs.textDim, fontSize = 12.sp,
+                    )
+                }
+            }
+        }
+
+        is Dialog.GitDiscard -> VsDialog(
+            "Discard changes", dismiss, "Discard", { ide.git.discard(d.change); dismiss() }, confirmColor = Vs.error,
+        ) {
+            Text(
+                if (d.change.untracked) "Delete the new file \"${d.change.path}\"? This can't be undone."
+                else "Discard your changes to \"${d.change.path}\"? This can't be undone.",
+                color = Vs.text, fontSize = 14.sp,
+            )
         }
 
         is Dialog.GoToLine -> {

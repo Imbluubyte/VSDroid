@@ -13,10 +13,11 @@ Kotlin + Jetpack Compose, no Electron, no WebView.
 - Terminal with two backends: Termux (full Linux tools) or the built-in Android shell
 - Python virtual environments (create, activate, delete, pip install, requirements.txt)
 - New project templates: Python, C# console / library / web API, Web, Node.js, C++ (CMake), empty
+- Source Control tab (Ctrl+Shift+G): see changes, stage/unstage/discard, commit, push, pull, fetch, initialize a repository, add a remote, clone from GitHub, sign in with a personal access token. Uses `git` inside Termux
 - Keyboard shortcuts (press F1 in the app for the full list)
 - Auto-indent, auto-closing brackets and quotes, comment toggle, move/duplicate/delete line
 
-Not included, by design: extensions, built-in Git, debugging.
+Not included, by design: extensions, debugging.
 
 ## Building the APK (no PC needed)
 
@@ -33,10 +34,21 @@ Locally: `gradle assembleDebug` (JDK 17 and the Android SDK required).
    ```
    echo "allow-external-apps=true" >> ~/.termux/termux.properties
    termux-setup-storage
-   pkg install python
+   pkg install python git
    ```
    Close Termux completely, reopen it once, then in VSDroid tap "Grant Termux permission".
 3. Without Termux the terminal falls back to the basic Android shell (ls, cat, etc., but no Python or dotnet).
+
+## Git and GitHub
+
+Open the Source Control tab (branch icon, or Ctrl+Shift+G). Git runs inside Termux, so run `pkg install git` there once.
+
+- **Sign in:** in the GitHub section tap *Sign in to GitHub* and enter your username and a personal access token (github.com > Settings > Developer settings > Personal access tokens, with the `repo` permission). VSDroid checks the token with GitHub, then stores it in Termux's private home folder (`~/.git-credentials`), not in your projects or `settings.json`. *Sign out* removes it.
+- **Commit identity:** set your name and email once (saved with `git config --global`).
+- **Clone:** *Clone a repository* (also Git > Clone Repository) takes `https://github.com/user/repo` or just `user/repo` and clones into `VSDroidProjects`, then opens it.
+- **New project to GitHub:** *Initialize repository*, create an empty repo on github.com, *Add remote*, commit, then *Push*.
+- Shared storage belongs to a different user than Termux, so VSDroid automatically adds each project to git's `safe.directory` list (this avoids the "dubious ownership" error).
+- Pull only fast-forwards. If your branch and the remote have diverged, VSDroid says so and you resolve it in the terminal. SSH keys, branch switching and diffs are not built in yet.
 
 ## Notes and limits
 

@@ -1,7 +1,7 @@
 # VSDroid roadmap
 
 ## Before the public release
-- [ ] **Git/GitHub tab** in the sidebar (status, stage, commit, push/pull, clone; via Termux `git`; auto `safe.directory` fix)
+- [x] **Git/GitHub tab** in the sidebar (status, stage, commit, push/pull, clone; via Termux `git`; auto `safe.directory` fix) – done, see below
 - [ ] **Consistent APK signing** (a fixed release keystore stored as a GitHub secret, so builds can update over each other)
 - [ ] **Custom themes** (built-in Light, Dracula, Catppuccin Mocha etc; user themes from JSON files; theme picker in Settings)
 - [ ] **Custom templates** (user-defined project templates; ties in with the setup guide)
@@ -30,3 +30,4 @@
 - Backspace removes a whole indent level; auto-close pairs are deleted together
 - Run support for Python, C#, Java, JavaScript, TypeScript, Kotlin, C/C++, Lua, shell
 - Renamed from TabCode to VSDroid
+- Git/GitHub Source Control tab (Ctrl+Shift+G): branch and ahead/behind, stage/unstage/discard, commit, push/pull/fetch, init, add remote, clone, GitHub sign-in with a personal access token, commit identity, automatic `safe.directory` fix. Runs `git` inside Termux. Not done yet (ideas): branch switching, diffs, merge-conflict helpers, SSH keys

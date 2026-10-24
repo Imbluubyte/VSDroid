@@ -48,6 +48,7 @@ import com.vsdroid.ide.ui.Breadcrumb
 import com.vsdroid.ide.ui.CodeEditor
 import com.vsdroid.ide.ui.EnvPanel
 import com.vsdroid.ide.ui.ExplorerPanel
+import com.vsdroid.ide.ui.GitPanel
 import com.vsdroid.ide.ui.FlatButton
 import com.vsdroid.ide.ui.IdeDialogs
 import com.vsdroid.ide.ui.Palette
@@ -169,6 +170,7 @@ private fun IdeScreen(ide: IdeState, c: Commands) {
                         when (ide.sideView) {
                             SideView.EXPLORER -> ExplorerPanel(ide)
                             SideView.SEARCH -> SearchPanel(ide)
+                            SideView.GIT -> GitPanel(ide)
                             SideView.ENV -> if (ide.hasPython) EnvPanel(ide) else ExplorerPanel(ide)
                         }
                     }

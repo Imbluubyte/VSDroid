@@ -10,6 +10,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import com.vsdroid.ide.core.AppSettings
+import com.vsdroid.ide.core.GitChange
+import com.vsdroid.ide.core.GitState
 import com.vsdroid.ide.core.Language
 import com.vsdroid.ide.core.Languages
 import com.vsdroid.ide.core.SearchHit
@@ -37,7 +39,7 @@ class EditorTab(val file: File, initial: String) {
     var scrollToLine by mutableStateOf(0)
 }
 
-enum class SideView { EXPLORER, SEARCH, ENV }
+enum class SideView { EXPLORER, SEARCH, GIT, ENV }
 
 enum class PkgState { INSTALLING, INSTALLED, FAILED }
 
@@ -51,6 +53,11 @@ sealed class Dialog {
     object OpenPath : Dialog()
     object GoToLine : Dialog()
     object Help : Dialog()
+    object GitClone : Dialog()
+    object GitSignIn : Dialog()
+    object GitIdentity : Dialog()
+    object GitAddRemote : Dialog()
+    data class GitDiscard(val change: GitChange) : Dialog()
 }
 
 class IdeState(
@@ -106,6 +113,9 @@ class IdeState(
         termuxGranted = com.vsdroid.ide.core.TermuxBridge.hasPermission(context)
     }
 
+    /** Source Control tab: runs git inside Termux. */
+    val git = GitState(context, scope, workspace, { root }, { toast(it) }, { reloadFromDisk() })
+
     // Search panel state
     var searchQuery by mutableStateOf("")
     var searchCaseSensitive by mutableStateOf(false)
@@ -126,6 +136,8 @@ class IdeState(
 
     init {
         terminal = TerminalSession(context, scope, workspace)
+        // Commands typed in the terminal may be git commands, so keep the Source Control tab current.
+        terminal.onFinished = { if (sidebarVisible && sideView == SideView.GIT) git.refresh() }
         settingsError?.let { toast(it) }
         prefs.getString("lastRoot", null)?.let { File(it) }?.takeIf { it.isDirectory }?.let { openFolder(it) }
     }
@@ -146,6 +158,7 @@ class IdeState(
         terminal.cwd = dir
         searchHits.clear()
         searchFiles.clear()
+        git.reset()
         refreshVenvs()
         treeVersion++
         refreshProjectInfo()
@@ -153,6 +166,7 @@ class IdeState(
 
     fun closeFolder() {
         root = null
+        git.reset()
         tabs.clear()
         activeTab = null
         venvs.clear()
@@ -263,6 +277,30 @@ class IdeState(
     }
 
     fun saveAll() = tabs.filter { it.dirty }.forEach { save(it) }
+
+    /**
+     * Re-reads open files after something outside the editor changed them (git pull, discarding changes).
+     * Tabs with unsaved edits are left alone; tabs whose file is gone are closed.
+     */
+    fun reloadFromDisk() {
+        for (tab in tabs.toList()) {
+            if (tab.dirty) continue
+            if (!tab.file.isFile) {
+                closeTab(tab)
+                continue
+            }
+            val text = try {
+                tab.file.readText().replace("\r\n", "\n")
+            } catch (e: Exception) {
+                continue
+            }
+            if (text != tab.savedText) {
+                tab.value = TextFieldValue(text)
+                tab.savedText = text
+            }
+        }
+        refreshTree()
+    }
 
     fun requestClose(tab: EditorTab) {
         if (tab.dirty && !autoSave) dialog = Dialog.UnsavedClose(tab) else closeTab(tab)

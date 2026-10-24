@@ -61,6 +61,9 @@ class TerminalSession(
 
     val history = ArrayList<String>()
 
+    /** Called every time a command finishes (whatever its exit code). */
+    var onFinished: () -> Unit = {}
+
     private var job: Job? = null
     private var proc: Process? = null
     private var sessionDir: String? = null
@@ -123,6 +126,7 @@ class TerminalSession(
             }
             if (code != 0 && code != -1) print("[Exited with code $code]", LineKind.INFO)
             onDone(code)
+            onFinished()
         }
     }
 
