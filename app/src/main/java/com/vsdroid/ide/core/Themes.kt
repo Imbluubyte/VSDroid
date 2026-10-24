@@ -16,9 +16,9 @@ import java.io.InputStream
 enum class ThemeKey(val section: String, val key: String, val dark: Long, val light: Long) {
     EditorBg("colors", "editorBg", 0xFF1E1E1E, 0xFFFFFFFF),
     SideBarBg("colors", "sideBarBg", 0xFF252526, 0xFFF3F3F3),
-    ActivityBarBg("colors", "activityBarBg", 0xFF333333, 0xFF2C2C2C),
-    ActivityBarFg("colors", "activityBarFg", 0xFF858585, 0x99FFFFFF),
-    ActivityBarFgActive("colors", "activityBarFgActive", 0xFFFFFFFF, 0xFFFFFFFF),
+    ActivityBarBg("colors", "activityBarBg", 0xFF333333, 0xFFE7E7E7),
+    ActivityBarFg("colors", "activityBarFg", 0xFF858585, 0xFF6B6B6B),
+    ActivityBarFgActive("colors", "activityBarFgActive", 0xFFFFFFFF, 0xFF1F1F1F),
     TitleBarBg("colors", "titleBarBg", 0xFF3C3C3C, 0xFFDDDDDD),
     TabBarBg("colors", "tabBarBg", 0xFF252526, 0xFFF3F3F3),
     TabInactiveBg("colors", "tabInactiveBg", 0xFF2D2D2D, 0xFFECECEC),
