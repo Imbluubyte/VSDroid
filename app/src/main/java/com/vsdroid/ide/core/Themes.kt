@@ -23,7 +23,6 @@ enum class ThemeKey(val section: String, val key: String, val dark: Long, val li
     TabBarBg("colors", "tabBarBg", 0xFF252526, 0xFFF3F3F3),
     TabInactiveBg("colors", "tabInactiveBg", 0xFF2D2D2D, 0xFFECECEC),
     PanelBg("colors", "panelBg", 0xFF1E1E1E, 0xFFFFFFFF),
-    StatusBarBg("colors", "statusBarBg", 0xFF007ACC, 0xFF007ACC),
     Border("colors", "border", 0xFF3C3C3C, 0xFFD4D4D4),
     Selection("colors", "selection", 0xFF264F78, 0xFFADD6FF),
     Hover("colors", "hover", 0xFF2A2D2E, 0xFFE8E8E8),

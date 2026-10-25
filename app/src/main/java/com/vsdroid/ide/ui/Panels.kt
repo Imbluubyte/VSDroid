@@ -33,6 +33,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.foundation.layout.widthIn
@@ -93,7 +94,7 @@ fun TitleBar(ide: IdeState, c: Commands) {
         Icon(Icons.Filled.Code, null, tint = Vs.accent, modifier = Modifier.padding(horizontal = 8.dp).size(20.dp))
         MenuButton(ide, "File", listOf(c.newFile, c.newProject, c.openFolder, c.browseFolder, null, c.save, c.saveAll, c.toggleAutoSave, null, c.closeTab, c.closeFolder, null, c.renameFile))
         MenuButton(ide, "Edit", listOf(c.comment, c.duplicate, c.deleteLine, null, c.moveUp, c.moveDown, null, c.indent, c.outdent))
-        MenuButton(ide, "View", listOf(c.palette, c.quickOpen, c.goToLine, null, c.showExplorer, c.showSearch, c.showGit, c.showEnv, null, c.toggleSidebar, c.toggleTerminal, null, c.zoomIn, c.zoomOut, c.zoomReset))
+        MenuButton(ide, "View", listOf(c.palette, c.quickOpen, c.goToLine, null, c.showExplorer, c.showSearch, c.showGit, c.showEnv, null, c.toggleSidebar, c.toggleTerminal, c.todoList, null, c.zoomIn, c.zoomOut, c.zoomReset))
         MenuButton(ide, "Terminal", listOf(c.newTerminal, c.closeTerminal, c.clearTerminal, null, c.toggleTerminal))
         MenuButton(ide, "Run", listOf(c.runFile, null, c.newVenv))
         MenuButton(ide, "Git", listOf(c.showGit, null, c.gitClone, c.gitPull, c.gitPush))
@@ -114,6 +115,25 @@ fun TitleBar(ide: IdeState, c: Commands) {
                     ide.root?.name ?: "VSDroid", color = Vs.text, fontSize = 12.sp,
                     maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 8.dp),
                 )
+            }
+        }
+        // To-Do button (per project): opens the dropdown; the badge counts open tasks
+        if (ide.root != null) {
+            Row(
+                Modifier.height(34.dp).clickable { ide.toggleTodoPanel() }.padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.CheckBox, "To-Do list", tint = if (ide.todoOpen) Vs.accent else Vs.text, modifier = Modifier.size(20.dp))
+                val open = ide.todos.count { !it.done }
+                if (open > 0) {
+                    Text(
+                        if (open > 99) "99+" else "$open", color = Color.White, fontSize = 11.sp,
+                        modifier = Modifier
+                            .padding(start = 4.dp)
+                            .background(Vs.accent, androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                            .padding(horizontal = 5.dp, vertical = 1.dp),
+                    )
+                }
             }
         }
         // Settings button
@@ -505,31 +525,6 @@ private fun Modifier.androidKeys(onUp: () -> Unit, onDown: () -> Unit, onEnter: 
             }
         }
     }
-
-// ---- Status bar ---------------------------------------------------------------------------------
-
-@Composable
-fun StatusBar(ide: IdeState) {
-    val tab = ide.activeTab
-    Row(
-        Modifier.fillMaxWidth().height(26.dp).background(Vs.statusBarBg).padding(horizontal = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        val py = ide.activeVenvPath?.let { java.io.File(it).name }
-        Text(if (py != null) "Python: $py" else ide.terminal.backend.label, color = Color.White, fontSize = 12.sp)
-        if (ide.autoSave) Text("Auto Save", color = Color.White, fontSize = 12.sp)
-        Spacer(Modifier.weight(1f))
-        if (tab != null) {
-            val (line, col) = EditorOps.lineCol(tab.value.text, tab.value.selection.end)
-            Text("Ln $line, Col $col", color = Color.White, fontSize = 12.sp)
-            Text("Spaces: 4", color = Color.White, fontSize = 12.sp)
-            Text("UTF-8", color = Color.White, fontSize = 12.sp)
-            Text(tab.language.name, color = Color.White, fontSize = 12.sp)
-        }
-        Text("${ide.fontSize.toInt()}px", color = Color.White, fontSize = 12.sp)
-    }
-}
 
 // ---- Toast --------------------------------------------------------------------------------------
 

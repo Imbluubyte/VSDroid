@@ -49,6 +49,7 @@ class Commands(private val ide: IdeState) {
     val showEnv = Command("view.python", "View: Show Python Environments", "Ctrl+Shift+D") {
         if (ide.hasPython) showSide(SideView.ENV) else ide.toast("Python environments appear once the project has a .py file")
     }
+    val todoList = Command("view.todo", "View: Toggle To-Do List", "Ctrl+Shift+T") { ide.toggleTodoPanel() }
     val zoomIn = Command("view.zoomIn", "View: Zoom In", "Ctrl+=") { ide.changeFontSize(ide.fontSize + 1f) }
     val zoomOut = Command("view.zoomOut", "View: Zoom Out", "Ctrl+-") { ide.changeFontSize(ide.fontSize - 1f) }
     val zoomReset = Command("view.zoomReset", "View: Reset Zoom", "Ctrl+0") { ide.changeFontSize(14f) }
@@ -104,7 +105,7 @@ class Commands(private val ide: IdeState) {
     val all: List<Command> = listOf(
         newFile, newProject, openFolder, browseFolder, closeFolder, save, saveAll, closeTab, toggleAutoSave, renameFile,
         quickOpen, palette, goToLine,
-        toggleSidebar, toggleTerminal, showExplorer, showSearch, showGit, showEnv, zoomIn, zoomOut, zoomReset,
+        toggleSidebar, toggleTerminal, todoList, showExplorer, showSearch, showGit, showEnv, zoomIn, zoomOut, zoomReset,
         nextTab, prevTab,
         comment, duplicate, deleteLine, moveUp, moveDown, indent, outdent,
         runFile, newVenv, gitClone, gitPull, gitPush, clearTerminal, newTerminal, closeTerminal, help, setupGuide, openSettings,
@@ -211,7 +212,7 @@ class Commands(private val ide: IdeState) {
     }
 
     /**
-     * Closes the topmost open layer: dropdown menu, dialog, command palette, settings screen, setup guide (in that order).
+     * Closes the topmost open layer: dropdown menu, dialog, command palette, settings screen, setup guide, to-do list (in that order).
      * Returns false when nothing was open. Dialogs only cancel, so nothing is ever saved or discarded by Esc.
      */
     fun dismissTopLayer(): Boolean {
@@ -224,6 +225,7 @@ class Commands(private val ide: IdeState) {
                 ide.settingsOpen = false
             }
             ide.setupOpen -> ide.setupOpen = false
+            ide.todoOpen -> ide.todoOpen = false
             else -> return false
         }
         return true
