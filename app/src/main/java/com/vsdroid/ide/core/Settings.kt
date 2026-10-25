@@ -17,6 +17,9 @@ class AppSettings(val file: File) {
     var autoClosePairs by mutableStateOf(true)
     var terminalOnStart by mutableStateOf(false)
 
+    /** False until the first-launch setup guide is finished or skipped. A settings file from before the guide existed counts as done. */
+    var setupDone by mutableStateOf(false)
+
     /** Id of the active theme: "dark", "light", or the file name of a theme in the themes folder. */
     var theme by mutableStateOf("dark")
 
@@ -33,6 +36,7 @@ class AppSettings(val file: File) {
             autoClosePairs = o.optBoolean("autoClosePairs", autoClosePairs)
             terminalOnStart = o.optBoolean("terminalOnStart", terminalOnStart)
             theme = o.optString("theme", theme).ifBlank { "dark" }
+            setupDone = o.optBoolean("setupDone", true)
             keybindings.clear()
             o.optJSONObject("keybindings")?.let { kb ->
                 val keys = kb.keys()
@@ -56,6 +60,7 @@ class AppSettings(val file: File) {
             o.put("autoClosePairs", autoClosePairs)
             o.put("terminalOnStart", terminalOnStart)
             o.put("theme", theme)
+            o.put("setupDone", setupDone)
             val kb = JSONObject()
             keybindings.toSortedMap().forEach { (k, v) -> kb.put(k, v) }
             o.put("keybindings", kb)

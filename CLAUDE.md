@@ -17,13 +17,16 @@ Claude is the lead developer, so make decisions, explain briefly, and keep the a
 - `IdeState.kt` – all app state (tabs, project, search, python envs/packages, dialogs). `Dialog` sealed class lives here.
 - `Commands.kt` – every action as a `Command(id, title, defaultShortcut)`; shortcuts are rebindable (state in `Command.shortcut`).
 - `core/` – no UI: `Languages`, `Syntax`, `Completion`, `Search`, `Templates`, `EditorOps` (auto-indent, auto-close, backspace rules),
-  `Settings` (settings.json), `Themes` (theme keys, built-in Dark/Light, JSON parsing/validation, `ThemeManager` state), `TerminalSession`, `TermuxBridge`, `Venv`, `PackageIndex`,
+  `Settings` (settings.json), `Setup` (first-launch guide: Termux shell scripts, `SetupState`), `Themes` (theme keys, built-in Dark/Light, JSON parsing/validation, `ThemeManager` state), `TerminalSession`, `TermuxBridge`, `Venv`, `PackageIndex`,
   `Git` (pure Kotlin: shell-script builders + `git status` parser, no Android; tested against real git), `GitState` (Source Control state/actions, runs the scripts via `TermuxBridge`).
-- `ui/` – `Editor`, `Sidebar` (explorer/search/env/package browser), `GitPanel` (Source Control tab), `Panels` (title bar, tabs, terminal, status bar), `Overlays` (palette + dialogs), `Settings` (settings window with tabs), `Theme` (`Vs` colour object, reads the active theme).
+- `ui/` – `Editor`, `Sidebar` (explorer/search/env/package browser), `GitPanel` (Source Control tab), `Panels` (title bar, tabs, terminal, status bar), `Overlays` (palette + dialogs), `Settings` (settings window with tabs), `Setup` (first-launch setup guide), `Theme` (`Vs` colour object, reads the active theme).
 
 ## Settings
 `VSDroid/settings.json` in shared storage (`AppSettings`). Edited via the Settings screen (Ctrl+,) or by opening the file in VSDroid; saving it in the editor reloads it.
 Shortcuts are stored as `commandId -> "Ctrl+Shift+P"`. New features that need options should add a field to `AppSettings` and a row to `ui/Settings.kt`.
+
+## Setup guide
+`ui/Setup.kt` (screens) + `core/Setup.kt` (`SetupScripts` = plain shell strings, `SetupState`). Opens when `settings.setupDone` is false; a settings.json from before the guide existed has no key and counts as done. Esc closes it for the session only; Finish or Skip sets `setupDone`. The Termux scripts are pure strings: test them with bash and fake `pkg`/`termux-setup-storage` commands (`SetupScripts.installScript` exits with `pkg install`'s code). To add a language, add a `SetupLanguage` (Termux package names, the command that proves it is installed).
 
 ## Terminal / Termux design
 - Backends: Termux (preferred) via the `RUN_COMMAND` intent, or a plain Android shell fallback.

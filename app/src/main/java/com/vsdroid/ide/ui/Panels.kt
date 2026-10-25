@@ -93,7 +93,7 @@ fun TitleBar(ide: IdeState, c: Commands) {
         MenuButton(ide, "View", listOf(c.palette, c.quickOpen, c.goToLine, null, c.showExplorer, c.showSearch, c.showGit, c.showEnv, null, c.toggleSidebar, c.toggleTerminal, null, c.zoomIn, c.zoomOut, c.zoomReset))
         MenuButton(ide, "Run", listOf(c.runFile, null, c.newVenv))
         MenuButton(ide, "Git", listOf(c.showGit, null, c.gitClone, c.gitPull, c.gitPush))
-        MenuButton(ide, "Help", listOf(c.help))
+        MenuButton(ide, "Help", listOf(c.help, c.setupGuide))
 
         Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
             Row(

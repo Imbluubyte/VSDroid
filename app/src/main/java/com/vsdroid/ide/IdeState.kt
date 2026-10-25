@@ -15,6 +15,7 @@ import com.vsdroid.ide.core.GitState
 import com.vsdroid.ide.core.Language
 import com.vsdroid.ide.core.Languages
 import com.vsdroid.ide.core.SearchHit
+import com.vsdroid.ide.core.SetupState
 import com.vsdroid.ide.core.Searcher
 import com.vsdroid.ide.core.TerminalSession
 import com.vsdroid.ide.core.ThemeException
@@ -102,6 +103,23 @@ class IdeState(
     val autoSave: Boolean get() = settings.autoSave
 
     var settingsOpen by mutableStateOf(false)
+
+    /** First-launch setup guide (see ui/Setup.kt). Open on a fresh install until it is finished or skipped. */
+    val setup = SetupState(context, scope)
+    var setupOpen by mutableStateOf(!settings.setupDone)
+
+    fun openSetup() {
+        setup.reset()
+        settingsOpen = false
+        setupOpen = true
+    }
+
+    /** Closes the guide for good (Finish or Skip setup). */
+    fun finishSetup() {
+        settings.setupDone = true
+        settings.save()
+        setupOpen = false
+    }
 
     /** Set when the explorer row was tapped last; used by the Rename File shortcut. */
     var selectedFile by mutableStateOf<File?>(null)

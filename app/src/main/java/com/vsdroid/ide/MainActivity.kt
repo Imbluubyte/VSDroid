@@ -62,6 +62,7 @@ import com.vsdroid.ide.ui.IdeDialogs
 import com.vsdroid.ide.ui.Palette
 import com.vsdroid.ide.ui.SearchPanel
 import com.vsdroid.ide.ui.SettingsScreen
+import com.vsdroid.ide.ui.SetupGuide
 import com.vsdroid.ide.ui.StatusBar
 import com.vsdroid.ide.ui.TabBar
 import com.vsdroid.ide.ui.VSDroidTheme
@@ -247,6 +248,7 @@ private fun IdeScreen(ide: IdeState, c: Commands) {
 
         if (ide.paletteOpen) Palette(ide, c)
         if (ide.settingsOpen) SettingsScreen(ide, c)
+        if (ide.setupOpen) SetupGuide(ide)
         IdeDialogs(ide, c)
         Toast(ide, Modifier.align(Alignment.BottomCenter).padding(bottom = 48.dp))
     }

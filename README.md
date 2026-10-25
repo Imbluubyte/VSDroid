@@ -30,14 +30,13 @@ Locally: `gradle assembleDebug` (JDK 17 and the Android SDK required).
 ## First run
 
 1. Grant "All files access". Projects live in `Internal storage/VSDroidProjects`.
-2. For the terminal and Python venvs, set up Termux (install it from F-Droid or GitHub, not the Play Store):
+2. A setup guide opens on a fresh install. It walks through installing Termux (from F-Droid or GitHub, not the Play Store), connecting it to VSDroid, installing the languages you pick, choosing a theme, and setting up Git and GitHub. Every step can be skipped. Reopen it any time from Help > Setup Guide or Settings > General.
+3. The one manual part is a single command, which the guide shows with a Copy button. You paste it into Termux once:
    ```
-   echo "allow-external-apps=true" >> ~/.termux/termux.properties
-   termux-setup-storage
-   pkg install python git
+   mkdir -p ~/.termux && { grep -qx 'allow-external-apps=true' ~/.termux/termux.properties 2>/dev/null || echo 'allow-external-apps=true' >> ~/.termux/termux.properties; } && termux-setup-storage
    ```
-   Close Termux completely, reopen it once, then in VSDroid tap "Grant Termux permission".
-3. Without Termux the terminal falls back to the basic Android shell (ls, cat, etc., but no Python or dotnet).
+   Then close Termux completely, reopen it once, and tap "Allow VSDroid to run commands" in the guide.
+4. Without Termux the terminal falls back to the basic Android shell (ls, cat, etc., but no Python or dotnet).
 
 ## Git and GitHub
 

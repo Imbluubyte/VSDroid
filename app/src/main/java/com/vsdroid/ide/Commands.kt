@@ -81,6 +81,7 @@ class Commands(private val ide: IdeState) {
     val gitPush = Command("git.push", "Git: Push") { ide.git.push() }
     val clearTerminal = Command("terminal.clear", "Terminal: Clear") { ide.terminal.clear() }
     val help = Command("help.shortcuts", "Help: Keyboard Shortcuts", "F1") { ide.dialog = Dialog.Help }
+    val setupGuide = Command("help.setup", "Help: Setup Guide") { ide.openSetup() }
 
     private fun showSide(v: SideView) {
         if (ide.sidebarVisible && ide.sideView == v) {
@@ -103,7 +104,7 @@ class Commands(private val ide: IdeState) {
         toggleSidebar, toggleTerminal, showExplorer, showSearch, showGit, showEnv, zoomIn, zoomOut, zoomReset,
         nextTab, prevTab,
         comment, duplicate, deleteLine, moveUp, moveDown, indent, outdent,
-        runFile, newVenv, gitClone, gitPull, gitPush, clearTerminal, help, openSettings,
+        runFile, newVenv, gitClone, gitPull, gitPush, clearTerminal, help, setupGuide, openSettings,
     )
 
     /** The command whose shortcut is being recorded in Settings, or null. */
@@ -207,7 +208,7 @@ class Commands(private val ide: IdeState) {
     }
 
     /**
-     * Closes the topmost open layer: dropdown menu, dialog, command palette, settings screen (in that order).
+     * Closes the topmost open layer: dropdown menu, dialog, command palette, settings screen, setup guide (in that order).
      * Returns false when nothing was open. Dialogs only cancel, so nothing is ever saved or discarded by Esc.
      */
     fun dismissTopLayer(): Boolean {
@@ -219,6 +220,7 @@ class Commands(private val ide: IdeState) {
                 recording = null
                 ide.settingsOpen = false
             }
+            ide.setupOpen -> ide.setupOpen = false
             else -> return false
         }
         return true
@@ -235,7 +237,7 @@ class Commands(private val ide: IdeState) {
         }
         if (combo == "Escape") return dismissTopLayer()
         // Dialogs are overlays inside this window, so keep the editor shortcuts from firing behind them.
-        if (ide.dialog != null) return false
+        if (ide.dialog != null || ide.setupOpen) return false
         val cmd = all.firstOrNull { it.shortcut.isNotEmpty() && it.shortcut.equals(combo, ignoreCase = true) }
             ?: when (combo) {
                 "Ctrl+J" -> toggleTerminal
