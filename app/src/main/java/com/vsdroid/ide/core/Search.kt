@@ -11,7 +11,7 @@ data class SearchHit(val file: File, val line: Int, val column: Int, val preview
 object Searcher {
     /** Folders never searched or listed in quick-open. */
     val IGNORED = setOf(
-        ".git", "node_modules", ".venv", "venv", "__pycache__", "bin", "obj", "build", ".gradle", ".idea", ".dart_tool",
+        ".git", ".vsdroid", "node_modules", ".venv", "venv", "__pycache__", "bin", "obj", "build", ".gradle", ".idea", ".dart_tool",
     )
 
     private const val MAX_FILE_BYTES = 1_000_000L

@@ -18,6 +18,8 @@ import com.vsdroid.ide.core.Languages
 import com.vsdroid.ide.core.SearchHit
 import com.vsdroid.ide.core.SetupState
 import com.vsdroid.ide.core.StoragePaths
+import com.vsdroid.ide.core.TodoItem
+import com.vsdroid.ide.core.TodoStore
 import com.vsdroid.ide.core.Searcher
 import com.vsdroid.ide.core.TerminalSession
 import com.vsdroid.ide.core.ThemeException
@@ -132,7 +134,6 @@ class IdeState(
     /** Open terminals. There is always at least one; [terminal] is the one being shown. */
     val terminals = mutableStateListOf<TerminalSession>()
     private var activeTerminalIndex by mutableIntStateOf(0)
-    private var terminalCounter = 0
 
     val terminal: TerminalSession
         get() = terminals.getOrNull(activeTerminalIndex) ?: terminals.first()
@@ -182,7 +183,11 @@ class IdeState(
     // ---- terminals ---------------------------------------------------------------------------
 
     private fun createTerminal(dir: File): TerminalSession {
-        val t = TerminalSession(context, scope, dir, "Terminal ${++terminalCounter}")
+        // Use the smallest number no open terminal has, so closing "Terminal 3" frees that name for the next one.
+        val used = terminals.map { it.name }.toSet()
+        var number = 1
+        while ("Terminal $number" in used) number++
+        val t = TerminalSession(context, scope, dir, "Terminal $number")
         t.activeVenv = activeVenvPath
         // Commands typed in a terminal may be git commands, so keep the Source Control tab current.
         t.onFinished = { if (sidebarVisible && sideView == SideView.GIT) git.refresh() }
@@ -236,6 +241,8 @@ class IdeState(
         expanded.clear()
         expanded[dir.path] = true
         terminals.forEach { it.cwd = dir }
+        todoOpen = false
+        loadTodos()
         searchHits.clear()
         searchFiles.clear()
         git.reset()
@@ -252,8 +259,67 @@ class IdeState(
         venvs.clear()
         activeVenvPath = null
         terminals.forEach { it.activeVenv = null }
+        todos.clear()
+        todoOpen = false
         hasPython = false
         prefs.edit().remove("lastRoot").apply()
+    }
+
+    // ---- to-do list (one per project, stored in the project) ---------------------------------------
+
+    val todos = mutableStateListOf<TodoItem>()
+    var todoOpen by mutableStateOf(false)
+
+    private fun loadTodos() {
+        todos.clear()
+        val r = root ?: return
+        val loaded = TodoStore.load(r)
+        todos.addAll(loaded.items)
+        loaded.error?.let { toast(it) }
+    }
+
+    private fun saveTodos() {
+        val r = root ?: return
+        val error = TodoStore.save(r, todos.toList())
+        if (error != null) {
+            toast("Could not save the to-do list: $error")
+            return
+        }
+        // If the list file is open in the editor, show the new contents there too.
+        val file = TodoStore.fileFor(r)
+        if (tabs.any { it.file == file }) reloadFromDisk()
+    }
+
+    fun toggleTodoPanel() {
+        if (root == null) toast("Open a project first") else todoOpen = !todoOpen
+    }
+
+    /** Returns true when the task was added. */
+    fun addTodo(text: String): Boolean {
+        val t = TodoStore.clean(text) ?: return false
+        if (todos.size >= TodoStore.MAX_ITEMS) {
+            toast("The to-do list is full (${TodoStore.MAX_ITEMS} tasks)")
+            return false
+        }
+        todos.add(TodoItem(t))
+        saveTodos()
+        return true
+    }
+
+    fun toggleTodo(index: Int) {
+        val item = todos.getOrNull(index) ?: return
+        todos[index] = item.copy(done = !item.done)
+        saveTodos()
+    }
+
+    fun deleteTodo(index: Int) {
+        if (index !in todos.indices) return
+        todos.removeAt(index)
+        saveTodos()
+    }
+
+    fun clearDoneTodos() {
+        if (todos.removeAll { it.done }) saveTodos()
     }
 
     /** Set by MainActivity: opens the system folder picker; the result comes back through [openPickedFolder]. */
@@ -362,6 +428,7 @@ class IdeState(
             t.file.writeText(t.value.text)
             t.savedText = t.value.text
             if (t.file.absolutePath == settings.file.absolutePath) reloadSettings()
+            if (root?.let { TodoStore.fileFor(it).absolutePath } == t.file.absolutePath) loadTodos()
             if (t.file.extension.equals("json", ignoreCase = true) && t.file.parentFile?.absolutePath == ThemeManager.dir?.absolutePath) {
                 themeFileSaved(t.file)
             }

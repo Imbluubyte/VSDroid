@@ -5,7 +5,7 @@
 - [x] **Consistent APK signing** (a fixed release keystore stored as GitHub secrets, so builds can update over each other) – done, see below
 - [x] **Custom themes**: built-in Light, user themes from JSON files, theme picker + create/import in Settings > Appearance – done. Not done yet (ideas): bundled Dracula / Catppuccin Mocha theme files
 - [ ] **Custom templates** (user-defined project templates; ties in with the setup guide)
-- [ ] **To-Do list dropdown** per project in the top bar (stored in the project, e.g. `.vsdroid/todo.json`)
+- [x] **To-Do list dropdown** per project in the top bar (stored in the project, e.g. `.vsdroid/todo.json`)
 - [x] **Settings button in the top bar** (its own button, out of the File menu)
 - [x] **Esc closes the open menu/dialog**, with save prompts where needed
 - [x] **First-launch setup guide**: Termux install and connection, language install, theme, Git/GitHub – done, see below. Not done yet (ideas): install progress for long downloads, detecting a Termux that needs `pkg upgrade`

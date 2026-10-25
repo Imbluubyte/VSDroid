@@ -5,7 +5,7 @@ Kotlin + Jetpack Compose, no Electron, no WebView.
 
 ## Features
 
-- VS Code Dark+ look and layout: title bar with menus, activity bar, side bar, tabs, breadcrumb, editor, terminal panel, status bar
+- VS Code Dark+ look and layout: title bar with menus, activity bar, side bar, tabs, breadcrumb, editor, terminal panel, per-project To-Do list
 - File explorer (create / rename / delete, long-press for the context menu)
 - Syntax highlighting: Python, C#, Kotlin, Java, JavaScript/TypeScript, C/C++, Lua, Shell, JSON, YAML, TOML, CSS, HTML/XML, Markdown
 - Word-level autocomplete: type `pri` in a Python file and get `print`, plus words already used in the file. Tab or tap accepts, Esc dismisses

@@ -29,7 +29,6 @@ object Vs {
     val tabBarBg get() = this[ThemeKey.TabBarBg]
     val tabInactiveBg get() = this[ThemeKey.TabInactiveBg]
     val panelBg get() = this[ThemeKey.PanelBg]
-    val statusBarBg get() = this[ThemeKey.StatusBarBg]
     val border get() = this[ThemeKey.Border]
     val selection get() = this[ThemeKey.Selection]
     val hover get() = this[ThemeKey.Hover]
