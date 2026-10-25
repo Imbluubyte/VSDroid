@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,6 +47,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.vsdroid.ide.core.ThemeKey
@@ -61,6 +64,7 @@ import com.vsdroid.ide.ui.GitPanel
 import com.vsdroid.ide.ui.FlatButton
 import com.vsdroid.ide.ui.IdeDialogs
 import com.vsdroid.ide.ui.Palette
+import com.vsdroid.ide.ui.ProblemsPanel
 import com.vsdroid.ide.ui.SearchPanel
 import com.vsdroid.ide.ui.SettingsScreen
 import com.vsdroid.ide.ui.SetupGuide
@@ -193,6 +197,7 @@ class MainActivity : ComponentActivity() {
         val cmds = remember { Commands(ide) }
         ideRef = ide
         commands = cmds
+        LaunchedEffect(ide.fullscreen) { applyFullscreen(ide.fullscreen) }
         ide.onRequestPickFolder = { launchFolderPicker() }
         ide.onRequestImportTheme = { themePicker.launch(arrayOf("*/*")) }
         ide.onRequestTermuxPermission = {
@@ -201,6 +206,17 @@ class MainActivity : ComponentActivity() {
         }
 
         IdeScreen(ide, cmds)
+    }
+
+    /** Hides (or shows again) the Android status bar and navigation bar. Swiping from the edge shows them briefly. */
+    private fun applyFullscreen(on: Boolean) {
+        val controller = WindowCompat.getInsetsController(window, window.decorView)
+        if (on) {
+            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+        } else {
+            controller.show(WindowInsetsCompat.Type.systemBars())
+        }
     }
 
     private fun hasAllFilesAccess(): Boolean =
@@ -245,6 +261,7 @@ private fun IdeScreen(ide: IdeState, c: Commands) {
                             SideView.EXPLORER -> ExplorerPanel(ide)
                             SideView.SEARCH -> SearchPanel(ide)
                             SideView.GIT -> GitPanel(ide)
+                            SideView.PROBLEMS -> ProblemsPanel(ide)
                             SideView.ENV -> if (ide.hasPython) EnvPanel(ide) else ExplorerPanel(ide)
                         }
                     }

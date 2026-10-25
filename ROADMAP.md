@@ -15,6 +15,8 @@
 - [ ] **Add the GPLv3 `LICENSE` file** and a licence line in the README before the repo goes public
 - [ ] Repo polish: README with screenshots, release workflow (tagged APKs on GitHub Releases), issue templates
 
+- [x] **Debugging update**: problem underlines, Problems tab, quick fixes, terminal-error underlines, F11 full screen – done, see below. Not done yet (ideas): type checking, a real debugger (breakpoints, stepping), JSX/TSX, "fix all" for a whole file
+
 ## After the public release
 - [ ] **Extension API** (very low priority). Will be similar to VSCode, this is a huge thing to implement so it'll take a while and we'll leave it until all core features are done
 
@@ -36,3 +38,5 @@
 - Visuals update: Settings is a floating window with a tab list and an X close icon; Appearance tab with Dark/Light themes, user JSON themes (new from template, import with validation); the Run button is an icon-only button shown only when the open file can be run; F1 shortcut list no longer has a footer note
 - First-launch setup guide (opens on a fresh install; Help > Setup Guide reopens it): Termux install check with F-Droid / GitHub links and an "Already installed" button, a copy-and-paste Termux setup command with a connection test, one-tap language installs (Python, JS/TS, C/C++, Lua, C#, Java, Kotlin) with per-language results, theme picker, Git install, commit identity and GitHub sign-in. Existing installs with a settings.json do not see it automatically
 - Browse for Folder (system folder picker, path conversion in `core/StoragePaths.kt`) and multiple terminals (tab strip, New/Close Terminal commands, Ctrl+Shift+`)
+- Debugging update: `core/Diag*.kt` is a pure-Kotlin, token-based checker (conservative: when unsure it stays quiet). Every language gets the same categories: unterminated strings/comments and bracket errors, language-specific syntax errors (missing `;`, missing `:`, `=` in a condition, missing commas), undefined names with "did you mean" fixes, unreachable code, `break`/`continue` outside a loop and unused locals. Languages with Python-like imports (Python, JS/TS `import`/`require`, Java/Kotlin `import`, C# `using`, C/C++ `#include`, Lua `require`) also get unused-import and "only a few members used" detection. `ProblemsState` scans the project in the background; the editor draws squiggles and shows the message with a quick-fix button; terminal errors (`core/TermErrors.kt`) are underlined on the file and line the output names
+- Fixed the crash on every launch after the first: `IdeState` reopened the last project from an early `init` block, before the to-do list (declared further down) existed. That restore now runs in the last `init` of the class, and a failure there only forgets the last project instead of crashing

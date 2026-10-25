@@ -18,8 +18,8 @@ Claude is the lead developer, so make decisions, explain briefly, and keep the a
 - `Commands.kt` – every action as a `Command(id, title, defaultShortcut)`; shortcuts are rebindable (state in `Command.shortcut`).
 - `core/` – no UI: `Languages`, `Syntax`, `Completion`, `Search`, `Templates`, `EditorOps` (auto-indent, auto-close, backspace rules),
   `Settings` (settings.json), `Setup` (first-launch guide: Termux shell scripts, `SetupState`), `Themes` (theme keys, built-in Dark/Light, JSON parsing/validation, `ThemeManager` state), `TerminalSession`, `TermuxBridge`, `Venv`, `PackageIndex`,
-  `Todo` (per-project to-do list, stored in `.vsdroid/todo.json`), `Git` (pure Kotlin: shell-script builders + `git status` parser, no Android; tested against real git), `GitState` (Source Control state/actions, runs the scripts via `TermuxBridge`).
-- `ui/` – `Editor`, `Sidebar` (explorer/search/env/package browser), `GitPanel` (Source Control tab), `Panels` (title bar, tabs, terminal), `Todo` (To-Do dropdown), `Overlays` (palette + dialogs), `Settings` (settings window with tabs), `Setup` (first-launch setup guide), `Theme` (`Vs` colour object, reads the active theme).
+  `Todo` (per-project to-do list, stored in `.vsdroid/todo.json`), `Diagnostics` + `DiagLexer`/`DiagPython`/`DiagBrace`/`DiagMisc`/`DiagData` (problem checker, pure Kotlin, tested with kotlinc on sample code; `ProblemsState.kt` runs it), `TermErrors` (terminal error to file:line), `Git` (pure Kotlin: shell-script builders + `git status` parser, no Android; tested against real git), `GitState` (Source Control state/actions, runs the scripts via `TermuxBridge`).
+- `ui/` – `ProblemsPanel` (Problems tab), `Editor` (also draws the squiggles), `Sidebar` (explorer/search/env/package browser), `GitPanel` (Source Control tab), `Panels` (title bar, tabs, terminal), `Todo` (To-Do dropdown), `Overlays` (palette + dialogs), `Settings` (settings window with tabs), `Setup` (first-launch setup guide), `Theme` (`Vs` colour object, reads the active theme).
 
 ## Settings
 `VSDroid/settings.json` in shared storage (`AppSettings`). Edited via the Settings screen (Ctrl+,) or by opening the file in VSDroid; saving it in the editor reloads it.
@@ -42,7 +42,12 @@ Shortcuts are stored as `commandId -> "Ctrl+Shift+P"`. New features that need op
 - GitHub login = a personal access token stored by git's `store` helper in Termux `~/.git-credentials` (never in settings.json). Only the exit code/`@@VSD_CODE` marker comes back; the token is not echoed or logged.
 - `Git.kt` can be compiled and exercised without Android (kotlinc + a script that runs the generated scripts against a throw-away repo with a temp `HOME`).
 
+## Problems / diagnostics
+- Same categories for every language (see ROADMAP). Don't add advanced checks for one language only; import checks exist for languages with Python-like imports. Prefer missing a problem over a false alarm. Test changes by compiling `core/Diag*.kt` + `Languages.kt` with kotlinc and running sample files, including real project files (the repo's own Kotlin should give no errors).
+- `knownGlobals` (settings.json) and the project word index (`ProjectIndex`) keep library and cross-file names from being reported.
+
 ## Gotchas we already hit (don't repeat)
+- `IdeState` runs property initializers and `init` blocks in textual order. Anything that calls `openFolder()` (restoring the last project) must be in the LAST `init` of the class; calling it earlier crashed every launch after the first (to-do list not created yet). New state used by `openFolder` goes above that block.
 - Value-based `BasicTextField` has no `softWrap`; don't pass it.
 - A Kotlin property `fontSize` plus a function `setFontSize()` clash on the JVM; name functions differently (`changeFontSize`).
 - Compose text layout lags one frame behind typing: check `layout.layoutInput.text.text == text` before `getCursorRect`/`getLineForOffset`.
