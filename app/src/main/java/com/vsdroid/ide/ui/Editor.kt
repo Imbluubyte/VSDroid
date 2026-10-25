@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
@@ -29,6 +31,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
@@ -57,9 +64,13 @@ import androidx.compose.ui.unit.sp
 import com.vsdroid.ide.EditorTab
 import com.vsdroid.ide.IdeState
 import com.vsdroid.ide.core.Completion
+import com.vsdroid.ide.core.Diagnostic
+import com.vsdroid.ide.core.Diagnostics
+import com.vsdroid.ide.core.Severity
 import com.vsdroid.ide.core.EditorOps
 import com.vsdroid.ide.core.Syntax
 import com.vsdroid.ide.core.ThemeManager
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 private class SyntaxTransformation(private val tab: EditorTab) : VisualTransformation {
@@ -105,6 +116,7 @@ fun CodeEditor(tab: EditorTab, ide: IdeState, modifier: Modifier = Modifier) {
         }
     }
     val lineCount = remember(text) { text.count { it == '\n' } + 1 }
+    val problems = ide.problems.forTab(tab)
     val currentLine = remember(text, cursor) { EditorOps.lineCol(text, cursor).first }
 
     LaunchedEffect(tab.scrollRequest) {
@@ -131,6 +143,8 @@ fun CodeEditor(tab: EditorTab, ide: IdeState, modifier: Modifier = Modifier) {
 
     BoxWithConstraints(modifier.background(Vs.editorBg)) {
         val minHeight = maxHeight
+        val here: Diagnostic? = problems.firstOrNull { cursor >= it.start && cursor <= it.end }
+            ?: problems.firstOrNull { it.line == currentLine }
         Row(Modifier.fillMaxSize().verticalScroll(vScroll)) {
             // Line-number gutter
             val gutterText = remember(lineCount) { (1..lineCount).joinToString("\n") }
@@ -158,6 +172,23 @@ fun CodeEditor(tab: EditorTab, ide: IdeState, modifier: Modifier = Modifier) {
                                 size = Size(size.width, l.getLineBottom(line) - l.getLineTop(line)),
                             )
                         }
+                    }
+                    .drawWithContent {
+                        drawContent()
+                        val l = layout?.takeIf { it.layoutInput.text.text == text }
+                        if (l != null && problems.isNotEmpty()) {
+                            for (d in problems) {
+                                if (d.start < 0 || d.end > text.length || d.end <= d.start) continue
+                                val line = l.getLineForOffset(d.start)
+                                val stop = min(d.end, l.getLineEnd(line))
+                                if (stop <= d.start) continue
+                                val x1 = l.getHorizontalPosition(d.start, true)
+                                var x2 = l.getHorizontalPosition(stop, true)
+                                if (x2 - x1 < 6.dp.toPx()) x2 = x1 + 6.dp.toPx()
+                                val y = l.getLineBottom(line) + 4.dp.toPx() - 1.dp.toPx()
+                                drawSquiggle(x1, x2, y, if (d.severity == Severity.ERROR) Vs.error else Vs.warning)
+                            }
+                        }
                     },
             ) {
                 BasicTextField(
@@ -169,7 +200,11 @@ fun CodeEditor(tab: EditorTab, ide: IdeState, modifier: Modifier = Modifier) {
                         } catch (e: Exception) {
                             new
                         }
-                        if (new.text != old.text) selectedSuggestion = 0
+                        if (new.text != old.text) {
+                            selectedSuggestion = 0
+                            tab.diagnostics = Diagnostics.remap(old.text, tab.value.text, tab.diagnostics)
+                            ide.problems.onEdited(tab)
+                        }
                         if (ide.autoSave && tab.dirty) ide.save(tab)
                     },
                     textStyle = style,
@@ -249,5 +284,53 @@ fun CodeEditor(tab: EditorTab, ide: IdeState, modifier: Modifier = Modifier) {
                 }
             }
         }
+
+        if (here != null) {
+            Row(
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth()
+                    .background(Vs.popupBg)
+                    .border(1.dp, Vs.border)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Box(Modifier.size(8.dp).background(if (here.severity == Severity.ERROR) Vs.error else Vs.warning, CircleShape))
+                Text(
+                    here.message, color = Vs.text, fontSize = 13.sp, maxLines = 2,
+                    modifier = Modifier.weight(1f),
+                )
+                val fix = here.fix
+                if (fix != null) {
+                    Text(
+                        fix.title,
+                        color = Vs.textBright,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier
+                            .background(Vs.accent)
+                            .clickable { ide.problems.applyFix(tab.file.path, here) }
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                    )
+                }
+            }
+        }
     }
+}
+
+/** A wavy underline from [x1] to [x2] at height [y]. */
+private fun DrawScope.drawSquiggle(x1: Float, x2: Float, y: Float, color: Color) {
+    val step = 3.dp.toPx()
+    val amp = 1.5.dp.toPx()
+    val path = Path()
+    path.moveTo(x1, y)
+    var x = x1
+    var up = true
+    while (x < x2) {
+        x = min(x + step, x2)
+        path.lineTo(x, if (up) y - amp else y + amp)
+        up = !up
+    }
+    drawPath(path, color, style = Stroke(width = 1.3.dp.toPx()))
 }

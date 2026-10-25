@@ -70,6 +70,12 @@ class TerminalSession(
     /** Called every time a command finishes (whatever its exit code). */
     var onFinished: () -> Unit = {}
 
+    /** Index in [lines] of the first output line of the last command, and the exit code it finished with (-1 when unknown). */
+    var lastRunStartLine = 0
+        private set
+    var lastExitCode = -1
+        private set
+
     private var job: Job? = null
     private var proc: Process? = null
     private var sessionDir: String? = null
@@ -112,6 +118,7 @@ class TerminalSession(
         }
         running = true
         partial = ""
+        lastRunStartLine = lines.size
         job = scope.launch {
             var code = -1
             try {
@@ -131,6 +138,7 @@ class TerminalSession(
                 sessionDir = null
             }
             if (code != 0 && code != -1) print("[Exited with code $code]", LineKind.INFO)
+            lastExitCode = code
             onDone(code)
             onFinished()
         }

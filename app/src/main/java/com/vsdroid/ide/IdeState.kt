@@ -45,9 +45,12 @@ class EditorTab(val file: File, initial: String) {
     /** Bumped when the user jumps to a line, so the editor scrolls to it. */
     var scrollRequest by mutableStateOf(0)
     var scrollToLine by mutableStateOf(0)
+
+    /** Problems found in this text (kept in step with edits until the next check finishes). */
+    var diagnostics by mutableStateOf<List<com.vsdroid.ide.core.Diagnostic>>(emptyList())
 }
 
-enum class SideView { EXPLORER, SEARCH, GIT, ENV }
+enum class SideView { EXPLORER, SEARCH, GIT, PROBLEMS, ENV }
 
 enum class PkgState { INSTALLING, INSTALLED, FAILED }
 
@@ -149,6 +152,12 @@ class IdeState(
     }
 
     /** Source Control tab: runs git inside Termux. */
+    /** Problems tab and editor underlines. */
+    val problems = ProblemsState(scope, this)
+
+    /** True while the system bars (status and navigation bar) are hidden (F11). */
+    var fullscreen by mutableStateOf(false)
+
     val git = GitState(context, scope, workspace, { root }, { toast(it) }, { reloadFromDisk() })
 
     // Search panel state
@@ -173,7 +182,6 @@ class IdeState(
         terminals.add(createTerminal(workspace))
         (settingsError ?: themeErrors.entries.firstOrNull()?.let { "Theme ${it.key} was not loaded: ${it.value}" })
             ?.let { toast(it) }
-        prefs.getString("lastRoot", null)?.let { File(it) }?.takeIf { it.isDirectory }?.let { openFolder(it) }
     }
 
     fun toast(msg: String) {
@@ -190,7 +198,10 @@ class IdeState(
         val t = TerminalSession(context, scope, dir, "Terminal $number")
         t.activeVenv = activeVenvPath
         // Commands typed in a terminal may be git commands, so keep the Source Control tab current.
-        t.onFinished = { if (sidebarVisible && sideView == SideView.GIT) git.refresh() }
+        t.onFinished = {
+            if (sidebarVisible && sideView == SideView.GIT) git.refresh()
+            problems.captureTerminal(t, t.lastExitCode)
+        }
         return t
     }
 
@@ -249,6 +260,8 @@ class IdeState(
         refreshVenvs()
         treeVersion++
         refreshProjectInfo()
+        problems.clear()
+        problems.scanProject()
     }
 
     fun closeFolder() {
@@ -262,6 +275,7 @@ class IdeState(
         todos.clear()
         todoOpen = false
         hasPython = false
+        problems.clear()
         prefs.edit().remove("lastRoot").apply()
     }
 
@@ -346,6 +360,7 @@ class IdeState(
     fun refreshTree() {
         treeVersion++
         refreshProjectInfo()
+        problems.scanProject()
     }
 
     /** Looks for Python files so the Python Environments tab only shows up in Python projects. */
@@ -400,6 +415,7 @@ class IdeState(
         val tab = EditorTab(file, text.replace("\r\n", "\n"))
         tabs.add(tab)
         activeTab = tab
+        problems.analyzeNow(tab)
         if (line > 0) jump(tab, line)
     }
 
@@ -442,6 +458,7 @@ class IdeState(
         if (err != null) toast(err) else toast("Settings reloaded")
         ThemeManager.select(settings.theme)
         onSettingsReloaded()
+        problems.settingsChanged()
     }
 
     // ---- themes --------------------------------------------------------------------------------
@@ -807,6 +824,18 @@ class IdeState(
     fun toggleAutoSave() {
         settings.autoSave = !settings.autoSave
         settings.save()
+    }
+
+    // Must stay the LAST initializer of the class: Kotlin runs property initializers and init blocks in textual order, and
+    // openFolder() touches state (the to-do list, search results, ...) declared further down. Restoring the last project from an
+    // earlier init block crashed every launch except the first one (the first has no saved project).
+    init {
+        try {
+            prefs.getString("lastRoot", null)?.let { File(it) }?.takeIf { it.isDirectory }?.let { openFolder(it) }
+        } catch (e: Exception) {
+            prefs.edit().remove("lastRoot").apply()
+            toast("The last project could not be reopened")
+        }
     }
 }
 

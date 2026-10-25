@@ -20,6 +20,15 @@ class AppSettings(val file: File) {
     /** False until the first-launch setup guide is finished or skipped. A settings file from before the guide existed counts as done. */
     var setupDone by mutableStateOf(false)
 
+    /** Underline problems (syntax errors, undefined names, unused imports) and fill the Problems tab. */
+    var diagnostics by mutableStateOf(true)
+
+    /** Warn about `import x` when only this many members of x (or fewer) are used. 0 turns the check off. */
+    var partialImportThreshold by mutableStateOf(2)
+
+    /** Extra names the problem checker should treat as defined, for libraries it does not know. */
+    var knownGlobals by mutableStateOf<List<String>>(emptyList())
+
     /** Id of the active theme: "dark", "light", or the file name of a theme in the themes folder. */
     var theme by mutableStateOf("dark")
 
@@ -35,6 +44,11 @@ class AppSettings(val file: File) {
             autoSave = o.optBoolean("autoSave", autoSave)
             autoClosePairs = o.optBoolean("autoClosePairs", autoClosePairs)
             terminalOnStart = o.optBoolean("terminalOnStart", terminalOnStart)
+            diagnostics = o.optBoolean("diagnostics", diagnostics)
+            partialImportThreshold = o.optInt("partialImportThreshold", partialImportThreshold).coerceIn(0, 5)
+            o.optJSONArray("knownGlobals")?.let { a ->
+                knownGlobals = (0 until a.length()).map { a.optString(it, "").trim() }.filter { it.isNotEmpty() }
+            }
             theme = o.optString("theme", theme).ifBlank { "dark" }
             setupDone = o.optBoolean("setupDone", true)
             keybindings.clear()
@@ -59,6 +73,9 @@ class AppSettings(val file: File) {
             o.put("autoSave", autoSave)
             o.put("autoClosePairs", autoClosePairs)
             o.put("terminalOnStart", terminalOnStart)
+            o.put("diagnostics", diagnostics)
+            o.put("partialImportThreshold", partialImportThreshold)
+            o.put("knownGlobals", org.json.JSONArray(knownGlobals))
             o.put("theme", theme)
             o.put("setupDone", setupDone)
             val kb = JSONObject()

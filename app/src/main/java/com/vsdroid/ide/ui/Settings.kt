@@ -151,6 +151,22 @@ private fun GeneralTab(ide: IdeState, close: () -> Unit) {
     }
 
     Spacer(Modifier.height(20.dp))
+    SectionTitle("Problems")
+    SettingRow("Underline problems (errors, unused imports)") {
+        Switch(checked = s.diagnostics, onCheckedChange = { s.diagnostics = it; s.save(); ide.problems.settingsChanged() })
+    }
+    SettingRow("Suggest \"from x import y\" when at most this many members are used (0 = off)") {
+        MiniButton("−") { s.partialImportThreshold = (s.partialImportThreshold - 1).coerceAtLeast(0); s.save(); ide.problems.settingsChanged() }
+        Text("${s.partialImportThreshold}", color = Vs.textBright, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 12.dp))
+        MiniButton("+") { s.partialImportThreshold = (s.partialImportThreshold + 1).coerceAtMost(5); s.save(); ide.problems.settingsChanged() }
+    }
+    Text(
+        "Names from libraries the checker does not know can be listed under \"knownGlobals\" in settings.json. " +
+            "Add # noqa or // vsd-ignore to a line to silence its problems.",
+        color = Vs.textDim, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp),
+    )
+
+    Spacer(Modifier.height(20.dp))
     SectionTitle("Settings file")
     Text(s.file.path, color = Vs.textDim, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

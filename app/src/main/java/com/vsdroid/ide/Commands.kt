@@ -46,6 +46,22 @@ class Commands(private val ide: IdeState) {
     val showExplorer = Command("view.explorer", "View: Show Explorer", "Ctrl+Shift+E") { showSide(SideView.EXPLORER) }
     val showSearch = Command("view.search", "View: Show Search", "Ctrl+Shift+F") { showSide(SideView.SEARCH) }
     val showGit = Command("view.git", "View: Show Source Control", "Ctrl+Shift+G") { showSide(SideView.GIT) }
+    val showProblems = Command("view.problems", "View: Show Problems", "Ctrl+Shift+M") { showSide(SideView.PROBLEMS) }
+    val nextProblem = Command("problems.next", "Go to Next Problem", "F8") { goToNextProblem() }
+    val quickFix = Command("problems.fix", "Quick Fix", "Ctrl+.") {
+        val tab = ide.activeTab
+        if (tab != null) {
+            val cursor = tab.value.selection.end
+            val list = ide.problems.forTab(tab)
+            val d = list.firstOrNull { cursor >= it.start && cursor <= it.end && it.fix != null }
+                ?: list.firstOrNull { it.line == lineOfCursor(tab) && it.fix != null }
+            if (d != null) ide.problems.applyFix(tab.file.path, d) else ide.toast("No quick fix here")
+        }
+    }
+    val fullscreen = Command("view.fullscreen", "View: Toggle Full Screen", "F11") {
+        ide.fullscreen = !ide.fullscreen
+        if (ide.fullscreen) ide.toast("Full screen. Swipe from the screen edge to show the system bars, F11 to leave.")
+    }
     val showEnv = Command("view.python", "View: Show Python Environments", "Ctrl+Shift+D") {
         if (ide.hasPython) showSide(SideView.ENV) else ide.toast("Python environments appear once the project has a .py file")
     }
@@ -87,6 +103,29 @@ class Commands(private val ide: IdeState) {
     val help = Command("help.shortcuts", "Help: Keyboard Shortcuts", "F1") { ide.dialog = Dialog.Help }
     val setupGuide = Command("help.setup", "Help: Setup Guide") { ide.openSetup() }
 
+    private fun lineOfCursor(tab: EditorTab): Int {
+        val t = tab.value.text
+        val c = tab.value.selection.end.coerceIn(0, t.length)
+        var n = 1
+        for (i in 0 until c) if (t[i] == '\n') n++
+        return n
+    }
+
+    /** Moves the caret to the next problem of the open file (the first one after the caret, wrapping around). */
+    private fun goToNextProblem() {
+        val tab = ide.activeTab ?: return
+        val list = ide.problems.forTab(tab).sortedBy { it.start }
+        if (list.isEmpty()) {
+            ide.toast("No problems in this file")
+            return
+        }
+        val cursor = tab.value.selection.end
+        val next = list.firstOrNull { it.start > cursor } ?: list.first()
+        tab.value = tab.value.copy(selection = androidx.compose.ui.text.TextRange(next.start.coerceIn(0, tab.value.text.length)))
+        tab.scrollToLine = next.line
+        tab.scrollRequest++
+    }
+
     private fun showSide(v: SideView) {
         if (ide.sidebarVisible && ide.sideView == v) {
             ide.sidebarVisible = false
@@ -105,7 +144,7 @@ class Commands(private val ide: IdeState) {
     val all: List<Command> = listOf(
         newFile, newProject, openFolder, browseFolder, closeFolder, save, saveAll, closeTab, toggleAutoSave, renameFile,
         quickOpen, palette, goToLine,
-        toggleSidebar, toggleTerminal, todoList, showExplorer, showSearch, showGit, showEnv, zoomIn, zoomOut, zoomReset,
+        toggleSidebar, toggleTerminal, todoList, showExplorer, showSearch, showGit, showProblems, nextProblem, quickFix, fullscreen, showEnv, zoomIn, zoomOut, zoomReset,
         nextTab, prevTab,
         comment, duplicate, deleteLine, moveUp, moveDown, indent, outdent,
         runFile, newVenv, gitClone, gitPull, gitPush, clearTerminal, newTerminal, closeTerminal, help, setupGuide, openSettings,

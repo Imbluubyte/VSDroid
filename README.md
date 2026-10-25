@@ -16,6 +16,8 @@ Kotlin + Jetpack Compose, no Electron, no WebView.
 - Python virtual environments (create, activate, delete, pip install, requirements.txt)
 - New project templates: Python, C# console / library / web API, Web, Node.js, C++ (CMake), empty
 - Source Control tab (Ctrl+Shift+G): see changes, stage/unstage/discard, commit, push, pull, fetch, initialize a repository, add a remote, clone from GitHub, sign in with a personal access token. Uses `git` inside Termux
+- Problems: red underlines for syntax errors and undefined names, yellow underlines for unused imports and for `import x` where only a few members are used (the Problems tab, Ctrl+Shift+M, suggests e.g. `from random import randint`). Works for Python, C#, Java, Kotlin, JavaScript/TypeScript, C/C++, Lua and JSON. F8 jumps to the next problem, Ctrl+. applies the quick fix. A line the terminal complained about after running code is underlined too. Add `# noqa` or `// vsd-ignore` to a line to silence it; `knownGlobals` in settings.json lists names from libraries the checker does not know
+- Full screen (F11) hides the Android status and navigation bars
 - Keyboard shortcuts (press F1 in the app for the full list); Esc closes the topmost menu, dialog, command palette or settings screen
 - Auto-indent, auto-closing brackets and quotes, comment toggle, move/duplicate/delete line
 
