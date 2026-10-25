@@ -15,6 +15,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 
 enum class Backend(val label: String) {
     TERMUX("Termux"),
@@ -41,8 +42,13 @@ class TerminalSession(
     context: Context,
     private val scope: CoroutineScope,
     startDir: File,
+    /** Shown on the terminal's tab. */
+    val name: String = "Terminal",
 ) {
     private val context = context.applicationContext
+
+    /** What has been typed in this terminal's input line but not sent yet (kept when switching terminals). */
+    var input by mutableStateOf("")
 
     val lines = mutableStateListOf<TermLine>()
     var cwd by mutableStateOf(startDir)
@@ -300,7 +306,8 @@ class TerminalSession(
             return -1
         }
         val home = File(TermuxBridge.HOME)
-        val d = "${TermuxBridge.HOME}/.vsdroid/s/${System.currentTimeMillis().toString(36)}"
+        // The counter keeps two terminals that start in the same millisecond from sharing a folder.
+        val d = "${TermuxBridge.HOME}/.vsdroid/s/${System.currentTimeMillis().toString(36)}-${sessionCounter.incrementAndGet()}"
 
         val start = TermuxBridge.run(context, startScript(d, cmd), home)
         if (start.error != null) {
@@ -382,5 +389,6 @@ class TerminalSession(
         private const val MARKER = "__VSDROID_PWD__"
         private const val META = "__VSD_META__"
         private val ANSI = Regex("\u001B\\[[0-9;?]*[ -/]*[@-~]")
+        private val sessionCounter = AtomicInteger()
     }
 }

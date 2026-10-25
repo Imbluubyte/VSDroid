@@ -24,6 +24,7 @@ class Commands(private val ide: IdeState) {
     }
     val newProject = Command("file.newProject", "File: New Project...", "Ctrl+Shift+N") { ide.dialog = Dialog.NewProject }
     val openFolder = Command("file.open", "File: Open Folder...", "Ctrl+O") { ide.dialog = Dialog.OpenPath }
+    val browseFolder = Command("file.browse", "File: Browse for Folder...") { ide.onRequestPickFolder() }
     val closeFolder = Command("file.closeFolder", "File: Close Folder") { ide.closeFolder() }
     val save = Command("file.save", "File: Save", "Ctrl+S") { ide.save() }
     val saveAll = Command("file.saveAll", "File: Save All", "Ctrl+Shift+S") { ide.saveAll() }
@@ -80,6 +81,8 @@ class Commands(private val ide: IdeState) {
     val gitPull = Command("git.pull", "Git: Pull") { ide.git.pull() }
     val gitPush = Command("git.push", "Git: Push") { ide.git.push() }
     val clearTerminal = Command("terminal.clear", "Terminal: Clear") { ide.terminal.clear() }
+    val newTerminal = Command("terminal.new", "Terminal: New Terminal", "Ctrl+Shift+`") { ide.newTerminal() }
+    val closeTerminal = Command("terminal.close", "Terminal: Close Terminal") { ide.closeTerminal() }
     val help = Command("help.shortcuts", "Help: Keyboard Shortcuts", "F1") { ide.dialog = Dialog.Help }
     val setupGuide = Command("help.setup", "Help: Setup Guide") { ide.openSetup() }
 
@@ -99,12 +102,12 @@ class Commands(private val ide: IdeState) {
     val openSettings = Command("app.settings", "Preferences: Open Settings", "Ctrl+,") { ide.settingsOpen = true }
 
     val all: List<Command> = listOf(
-        newFile, newProject, openFolder, closeFolder, save, saveAll, closeTab, toggleAutoSave, renameFile,
+        newFile, newProject, openFolder, browseFolder, closeFolder, save, saveAll, closeTab, toggleAutoSave, renameFile,
         quickOpen, palette, goToLine,
         toggleSidebar, toggleTerminal, showExplorer, showSearch, showGit, showEnv, zoomIn, zoomOut, zoomReset,
         nextTab, prevTab,
         comment, duplicate, deleteLine, moveUp, moveDown, indent, outdent,
-        runFile, newVenv, gitClone, gitPull, gitPush, clearTerminal, help, setupGuide, openSettings,
+        runFile, newVenv, gitClone, gitPull, gitPush, clearTerminal, newTerminal, closeTerminal, help, setupGuide, openSettings,
     )
 
     /** The command whose shortcut is being recorded in Settings, or null. */

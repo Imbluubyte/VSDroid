@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Bundle
 import android.graphics.drawable.ColorDrawable
 import android.os.Environment
+import android.provider.DocumentsContract
 import android.provider.OpenableColumns
 import android.provider.Settings
 import android.view.KeyEvent
@@ -81,6 +82,29 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {
             ideRef?.refreshTermuxStatus()
         }
+
+    /** System folder picker for "Browse for Folder". The chosen folder is converted to a real path and opened as a project. */
+    private val folderPicker =
+        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+            val ide = ideRef
+            if (uri != null && ide != null) {
+                try {
+                    ide.openPickedFolder(uri.authority, DocumentsContract.getTreeDocumentId(uri))
+                } catch (e: Exception) {
+                    ide.toast("Could not open that folder: ${e.message ?: "unknown error"}")
+                }
+            }
+        }
+
+    private fun launchFolderPicker() {
+        // Start in the projects folder when the system picker allows it.
+        val start = try {
+            DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", "primary:VSDroidProjects")
+        } catch (e: Exception) {
+            null
+        }
+        folderPicker.launch(start)
+    }
 
     /** System file manager for "Import theme". Any file type is allowed; the content is validated afterwards. */
     private val themePicker =
@@ -169,6 +193,7 @@ class MainActivity : ComponentActivity() {
         val cmds = remember { Commands(ide) }
         ideRef = ide
         commands = cmds
+        ide.onRequestPickFolder = { launchFolderPicker() }
         ide.onRequestImportTheme = { themePicker.launch(arrayOf("*/*")) }
         ide.onRequestTermuxPermission = {
             if (TermuxBridge.isInstalled(this)) termuxPermission.launch(TermuxBridge.PERMISSION)

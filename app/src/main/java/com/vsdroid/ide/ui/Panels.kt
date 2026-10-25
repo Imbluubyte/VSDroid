@@ -30,6 +30,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
@@ -54,6 +55,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -78,6 +80,7 @@ import com.vsdroid.ide.SideView
 import com.vsdroid.ide.core.Backend
 import com.vsdroid.ide.core.EditorOps
 import com.vsdroid.ide.core.LineKind
+import com.vsdroid.ide.core.TerminalSession
 
 // ---- Title bar with menus -------------------------------------------------------------------
 
@@ -88,9 +91,10 @@ fun TitleBar(ide: IdeState, c: Commands) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(Icons.Filled.Code, null, tint = Vs.accent, modifier = Modifier.padding(horizontal = 8.dp).size(20.dp))
-        MenuButton(ide, "File", listOf(c.newFile, c.newProject, c.openFolder, null, c.save, c.saveAll, c.toggleAutoSave, null, c.closeTab, c.closeFolder, null, c.renameFile))
+        MenuButton(ide, "File", listOf(c.newFile, c.newProject, c.openFolder, c.browseFolder, null, c.save, c.saveAll, c.toggleAutoSave, null, c.closeTab, c.closeFolder, null, c.renameFile))
         MenuButton(ide, "Edit", listOf(c.comment, c.duplicate, c.deleteLine, null, c.moveUp, c.moveDown, null, c.indent, c.outdent))
         MenuButton(ide, "View", listOf(c.palette, c.quickOpen, c.goToLine, null, c.showExplorer, c.showSearch, c.showGit, c.showEnv, null, c.toggleSidebar, c.toggleTerminal, null, c.zoomIn, c.zoomOut, c.zoomReset))
+        MenuButton(ide, "Terminal", listOf(c.newTerminal, c.closeTerminal, c.clearTerminal, null, c.toggleTerminal))
         MenuButton(ide, "Run", listOf(c.runFile, null, c.newVenv))
         MenuButton(ide, "Git", listOf(c.showGit, null, c.gitClone, c.gitPull, c.gitPush))
         MenuButton(ide, "Help", listOf(c.help, c.setupGuide))
@@ -307,7 +311,47 @@ fun Welcome(ide: IdeState, c: Commands) {
 @Composable
 fun TerminalPanel(ide: IdeState, modifier: Modifier = Modifier) {
     val term = ide.terminal
-    var input by remember { mutableStateOf("") }
+    Column(modifier.background(Vs.panelBg)) {
+        TerminalTabs(ide)
+        // One view per terminal, so each keeps its own scroll position and place in the command history.
+        key(term) { TerminalView(ide, term, Modifier.weight(1f)) }
+    }
+}
+
+/** The row of terminal tabs with a "+" button to open another terminal. */
+@Composable
+private fun TerminalTabs(ide: IdeState) {
+    Row(Modifier.fillMaxWidth().height(30.dp).background(Vs.tabBarBg), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(rememberScrollState())) {
+            ide.terminals.toList().forEach { t ->
+                val active = ide.isActiveTerminal(t)
+                Row(
+                    Modifier
+                        .fillMaxHeight()
+                        .background(if (active) Vs.panelBg else Vs.tabInactiveBg)
+                        .clickable { ide.selectTerminal(t) }
+                        .padding(start = 12.dp, end = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // A green dot shows that a program is running in this terminal.
+                    if (t.running) Box(Modifier.padding(end = 6.dp).size(7.dp).background(Vs.success, CircleShape))
+                    Text(t.name, color = if (active) Vs.textBright else Vs.textDim, fontSize = 12.sp, maxLines = 1)
+                    Box(
+                        Modifier.padding(start = 4.dp).size(22.dp).clickable { ide.closeTerminal(t) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Filled.Close, "Close ${t.name}", tint = Vs.textDim, modifier = Modifier.size(14.dp))
+                    }
+                }
+            }
+        }
+        SmallIconButton(Icons.Filled.Add, "New terminal", { ide.newTerminal() })
+    }
+    Box(Modifier.fillMaxWidth().height(1.dp).background(Vs.border))
+}
+
+@Composable
+private fun TerminalView(ide: IdeState, term: TerminalSession, modifier: Modifier = Modifier) {
     var historyIndex by remember { mutableIntStateOf(-1) }
     val listState = rememberLazyListState()
 
@@ -320,13 +364,13 @@ fun TerminalPanel(ide: IdeState, modifier: Modifier = Modifier) {
     fun submit() {
         if (term.running) {
             // A program is running: this line is its input (e.g. Python's input()).
-            term.sendInput(input)
-            input = ""
+            term.sendInput(term.input)
+            term.input = ""
             return
         }
-        if (input.isBlank()) return
-        term.run(input)
-        input = ""
+        if (term.input.isBlank()) return
+        term.run(term.input)
+        term.input = ""
         historyIndex = -1
     }
 
@@ -336,7 +380,7 @@ fun TerminalPanel(ide: IdeState, modifier: Modifier = Modifier) {
             historyIndex == -1 && delta < 0 -> term.history.lastIndex
             else -> (historyIndex + delta).coerceIn(-1, term.history.lastIndex)
         }
-        input = if (historyIndex == -1) "" else term.history[historyIndex]
+        term.input = if (historyIndex == -1) "" else term.history[historyIndex]
     }
 
     Column(modifier.background(Vs.panelBg)) {
@@ -425,8 +469,8 @@ fun TerminalPanel(ide: IdeState, modifier: Modifier = Modifier) {
             )
             Spacer(Modifier.width(8.dp))
             BasicTextField(
-                value = input,
-                onValueChange = { input = it },
+                value = term.input,
+                onValueChange = { term.input = it },
                 singleLine = true,
                 textStyle = TextStyle(color = Vs.textBright, fontFamily = CodeFont, fontSize = 13.sp),
                 cursorBrush = SolidColor(Vs.textBright),

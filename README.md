@@ -11,6 +11,8 @@ Kotlin + Jetpack Compose, no Electron, no WebView.
 - Word-level autocomplete: type `pri` in a Python file and get `print`, plus words already used in the file. Tab or tap accepts, Esc dismisses
 - Search: keyword search across the project, and file-name search (plus Ctrl+P quick open)
 - Terminal with two backends: Termux (full Linux tools) or the built-in Android shell
+- Several terminals at once: tabs above the terminal, "+" for a new one, Ctrl+Shift+` too. Each terminal has its own folder, output and running program. Run opens a new terminal when the shown one is busy
+- Open a project with the system file manager: File > Browse for Folder (or the Browse button in File > Open Folder). Works for folders in Internal storage and on SD cards
 - Python virtual environments (create, activate, delete, pip install, requirements.txt)
 - New project templates: Python, C# console / library / web API, Web, Node.js, C++ (CMake), empty
 - Source Control tab (Ctrl+Shift+G): see changes, stage/unstage/discard, commit, push, pull, fetch, initialize a repository, add a remote, clone from GitHub, sign in with a personal access token. Uses `git` inside Termux
@@ -75,7 +77,7 @@ Switching from the old debug-signed builds to the fixed key needs one uninstall 
 
 ## Notes and limits
 
-- The terminal runs one command at a time. Programs can read input while running (Python `input()`, C# `Console.ReadLine()`, Java `Scanner`, Node `readline`): the prompt appears in the terminal and you type your answer. C, C++ and Lua only show a prompt if they flush output (`fflush(stdout)` / `io.stdout:flush()`). Ctrl+D and full-screen programs like vim are not supported.
+- Each terminal runs one command at a time (open another terminal to run things side by side). Programs can read input while running (Python `input()`, C# `Console.ReadLine()`, Java `Scanner`, Node `readline`): the prompt appears in the terminal and you type your answer. C, C++ and Lua only show a prompt if they flush output (`fflush(stdout)` / `io.stdout:flush()`). Ctrl+D and full-screen programs like vim are not supported.
 - Python virtual environments are stored in Termux's home folder, because shared storage cannot hold symlinks or executables.
 - Running C# needs the .NET SDK installed in Termux (`pkg install dotnet-sdk-8.0`, availability depends on Termux's repos).
 - Undo/redo works with a hardware keyboard (Ctrl+Z / Ctrl+Shift+Z); programmatic edits such as comment toggle are not part of the undo history.

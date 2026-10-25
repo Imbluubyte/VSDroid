@@ -3,6 +3,7 @@ package com.vsdroid.ide
 import android.content.Context
 import android.os.Environment
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -16,6 +17,7 @@ import com.vsdroid.ide.core.Language
 import com.vsdroid.ide.core.Languages
 import com.vsdroid.ide.core.SearchHit
 import com.vsdroid.ide.core.SetupState
+import com.vsdroid.ide.core.StoragePaths
 import com.vsdroid.ide.core.Searcher
 import com.vsdroid.ide.core.TerminalSession
 import com.vsdroid.ide.core.ThemeException
@@ -127,8 +129,13 @@ class IdeState(
     /** Called after settings.json is reloaded so shortcuts can be re-applied. */
     var onSettingsReloaded: () -> Unit = {}
 
-    lateinit var terminal: TerminalSession
-        private set
+    /** Open terminals. There is always at least one; [terminal] is the one being shown. */
+    val terminals = mutableStateListOf<TerminalSession>()
+    private var activeTerminalIndex by mutableIntStateOf(0)
+    private var terminalCounter = 0
+
+    val terminal: TerminalSession
+        get() = terminals.getOrNull(activeTerminalIndex) ?: terminals.first()
 
     /** Termux integration status; refreshed when the app resumes or the permission dialog returns. */
     var termuxInstalled by mutableStateOf(com.vsdroid.ide.core.TermuxBridge.isInstalled(context))
@@ -162,9 +169,7 @@ class IdeState(
     private var pyJob: Job? = null
 
     init {
-        terminal = TerminalSession(context, scope, workspace)
-        // Commands typed in the terminal may be git commands, so keep the Source Control tab current.
-        terminal.onFinished = { if (sidebarVisible && sideView == SideView.GIT) git.refresh() }
+        terminals.add(createTerminal(workspace))
         (settingsError ?: themeErrors.entries.firstOrNull()?.let { "Theme ${it.key} was not loaded: ${it.value}" })
             ?.let { toast(it) }
         prefs.getString("lastRoot", null)?.let { File(it) }?.takeIf { it.isDirectory }?.let { openFolder(it) }
@@ -173,6 +178,53 @@ class IdeState(
     fun toast(msg: String) {
         message = msg
     }
+
+    // ---- terminals ---------------------------------------------------------------------------
+
+    private fun createTerminal(dir: File): TerminalSession {
+        val t = TerminalSession(context, scope, dir, "Terminal ${++terminalCounter}")
+        t.activeVenv = activeVenvPath
+        // Commands typed in a terminal may be git commands, so keep the Source Control tab current.
+        t.onFinished = { if (sidebarVisible && sideView == SideView.GIT) git.refresh() }
+        return t
+    }
+
+    fun isActiveTerminal(t: TerminalSession) = t === terminal
+
+    fun selectTerminal(t: TerminalSession) {
+        val i = terminals.indexOf(t)
+        if (i >= 0) activeTerminalIndex = i
+    }
+
+    /** Opens another terminal in the project folder and shows it. */
+    fun newTerminal(): TerminalSession {
+        val t = createTerminal(root ?: workspace)
+        terminals.add(t)
+        activeTerminalIndex = terminals.lastIndex
+        terminalVisible = true
+        return t
+    }
+
+    /** Closes a terminal (stopping whatever it runs). Closing the last one hides the panel and leaves a fresh terminal behind. */
+    fun closeTerminal(t: TerminalSession = terminal) {
+        val i = terminals.indexOf(t)
+        if (i < 0) return
+        t.cancel()
+        terminals.removeAt(i)
+        if (terminals.isEmpty()) {
+            terminals.add(createTerminal(root ?: workspace))
+            activeTerminalIndex = 0
+            terminalVisible = false
+        } else {
+            activeTerminalIndex = when {
+                i < activeTerminalIndex -> activeTerminalIndex - 1
+                else -> activeTerminalIndex.coerceAtMost(terminals.lastIndex)
+            }
+        }
+    }
+
+    /** The terminal to run a file in: the shown one, or a new one when that one is busy with another program. */
+    private fun terminalForRun(): TerminalSession = if (terminal.running) newTerminal() else terminal
 
     // ---- folders / projects ------------------------------------------------------------------
 
@@ -183,7 +235,7 @@ class IdeState(
         activeTab = null
         expanded.clear()
         expanded[dir.path] = true
-        terminal.cwd = dir
+        terminals.forEach { it.cwd = dir }
         searchHits.clear()
         searchFiles.clear()
         git.reset()
@@ -199,9 +251,26 @@ class IdeState(
         activeTab = null
         venvs.clear()
         activeVenvPath = null
-        terminal.activeVenv = null
+        terminals.forEach { it.activeVenv = null }
         hasPython = false
         prefs.edit().remove("lastRoot").apply()
+    }
+
+    /** Set by MainActivity: opens the system folder picker; the result comes back through [openPickedFolder]. */
+    var onRequestPickFolder: () -> Unit = {}
+
+    /** Opens a folder chosen in the system picker, or explains why it can't be used. */
+    fun openPickedFolder(authority: String?, documentId: String?) {
+        val dir = StoragePaths.fromTree(authority, documentId)
+        when {
+            dir == null -> toast("That location can't be opened as a project. Pick a folder in Internal storage or on an SD card.")
+            !dir.isDirectory -> toast("Folder not found: ${dir.path}")
+            !dir.canRead() -> toast("VSDroid can't read that folder")
+            else -> {
+                dialog = null
+                openFolder(dir)
+            }
+        }
     }
 
     fun listProjects(): List<File> =
@@ -512,7 +581,7 @@ class IdeState(
         val r = root ?: return
         venvs.addAll(venvStore.list(r))
         activeVenvPath = venvStore.active(r)
-        terminal.activeVenv = activeVenvPath
+        terminals.forEach { it.activeVenv = activeVenvPath }
     }
 
     fun createVenv(name: String) {
@@ -570,8 +639,9 @@ class IdeState(
         val quoted = VenvStore.q(tab.file.path)
         val cmd = template.replace("{file}", quoted).replace("{cc}", if (tab.file.extension == "c") "clang" else "clang++")
         terminalVisible = true
-        terminal.cwd = if (template.contains("{file}")) tab.file.parentFile ?: terminal.cwd else (root ?: terminal.cwd)
-        terminal.run(cmd)
+        val term = terminalForRun()
+        term.cwd = if (template.contains("{file}")) tab.file.parentFile ?: term.cwd else (root ?: term.cwd)
+        term.run(cmd)
     }
 
     // ---- Python packages (installed in the background through Termux) ---------------------------

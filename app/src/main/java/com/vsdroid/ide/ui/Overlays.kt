@@ -374,6 +374,7 @@ fun IdeDialogs(ide: IdeState, commands: Commands) {
             VsDialog("Open Folder", dismiss, "Open", go) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     DialogField(path, { path = it }, "Folder path", go)
+                    FlatButton("Browse with file manager...", { ide.onRequestPickFolder() })
                     val projects = ide.listProjects()
                     if (projects.isNotEmpty()) {
                         Text("Projects in ${ide.workspace.name}:", color = Vs.textDim, fontSize = 12.sp)
