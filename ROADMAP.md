@@ -8,7 +8,7 @@
 - [ ] **To-Do list dropdown** per project in the top bar (stored in the project, e.g. `.vsdroid/todo.json`)
 - [x] **Settings button in the top bar** (its own button, out of the File menu)
 - [x] **Esc closes the open menu/dialog**, with save prompts where needed
-- [ ] **First-launch setup guide**: install Termux from F-Droid ("Already installed" button), enable Termux integration, install packages for chosen languages (with skip), choose a theme, then Git/GitHub setup
+- [x] **First-launch setup guide**: Termux install and connection, language install, theme, Git/GitHub – done, see below. Not done yet (ideas): install progress for long downloads, detecting a Termux that needs `pkg upgrade`
 - [ ] **Browse device files to open a project** (folder picker instead of typing a path)
 - [ ] **Thorough code scan for bugs** (review pass over every file, add tests for editing logic, crash log screen)
 - [x] **Choose a licence** – decided: GPLv3 (forks allowed only under the same licence, with source)
@@ -34,3 +34,4 @@
 - Fixed-key APK signing: CI signs with a keystore from GitHub secrets (setup in README, "Release signing"), falls back to the debug key without them, and checks the secret and password early with clear errors
 - Git/GitHub Source Control tab (Ctrl+Shift+G): branch and ahead/behind, stage/unstage/discard, commit, push/pull/fetch, init, add remote, clone, GitHub sign-in with a personal access token, commit identity, automatic `safe.directory` fix. Runs `git` inside Termux. Not done yet (ideas): branch switching, diffs, merge-conflict helpers, SSH keys
 - Visuals update: Settings is a floating window with a tab list and an X close icon; Appearance tab with Dark/Light themes, user JSON themes (new from template, import with validation); the Run button is an icon-only button shown only when the open file can be run; F1 shortcut list no longer has a footer note
+- First-launch setup guide (opens on a fresh install; Help > Setup Guide reopens it): Termux install check with F-Droid / GitHub links and an "Already installed" button, a copy-and-paste Termux setup command with a connection test, one-tap language installs (Python, JS/TS, C/C++, Lua, C#, Java, Kotlin) with per-language results, theme picker, Git install, commit identity and GitHub sign-in. Existing installs with a settings.json do not see it automatically
