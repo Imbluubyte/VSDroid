@@ -206,10 +206,7 @@ fun ActivityBar(ide: IdeState, c: Commands) {
         ActivityItem(Icons.Filled.FolderOpen, "Explorer", ide.sidebarVisible && ide.sideView == SideView.EXPLORER) { c.showExplorer.run() }
         ActivityItem(Icons.Filled.Search, "Search", ide.sidebarVisible && ide.sideView == SideView.SEARCH) { c.showSearch.run() }
         ActivityItem(Icons.Filled.AccountTree, "Source Control", ide.sidebarVisible && ide.sideView == SideView.GIT) { c.showGit.run() }
-        ActivityItem(
-            Icons.Filled.BugReport, "Problems", ide.sidebarVisible && ide.sideView == SideView.PROBLEMS,
-            badge = ide.problems.errorCount + ide.problems.warningCount, badgeIsError = ide.problems.errorCount > 0,
-        ) { c.showProblems.run() }
+        ActivityItem(Icons.Filled.BugReport, "Problems", ide.sidebarVisible && ide.sideView == SideView.PROBLEMS) { c.showProblems.run() }
         if (ide.hasPython) {
             ActivityItem(Icons.Filled.DataObject, "Python environments", ide.sidebarVisible && ide.sideView == SideView.ENV) { c.showEnv.run() }
         }
@@ -223,8 +220,6 @@ private fun ActivityItem(
     icon: ImageVector,
     desc: String,
     selected: Boolean,
-    badge: Int = 0,
-    badgeIsError: Boolean = false,
     onClick: () -> Unit,
 ) {
     Box(
@@ -233,17 +228,6 @@ private fun ActivityItem(
     ) {
         if (selected) Box(Modifier.align(Alignment.CenterStart).width(2.dp).height(28.dp).background(Vs.activityBarFgActive))
         Icon(icon, desc, tint = if (selected) Vs.activityBarFgActive else Vs.activityBarFg, modifier = Modifier.size(26.dp))
-        if (badge > 0) {
-            Box(
-                Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 8.dp, end = 6.dp)
-                    .background(if (badgeIsError) Vs.error else Vs.warning, CircleShape)
-                    .padding(horizontal = 5.dp, vertical = 1.dp),
-            ) {
-                Text(if (badge > 99) "99+" else badge.toString(), color = androidx.compose.ui.graphics.Color.White, fontSize = 9.sp)
-            }
-        }
     }
 }
 
