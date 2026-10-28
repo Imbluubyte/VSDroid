@@ -100,7 +100,7 @@ fun TitleBar(ide: IdeState, c: Commands) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(Icons.Filled.Code, null, tint = Vs.accent, modifier = Modifier.padding(horizontal = 8.dp).size(20.dp))
-        MenuButton(ide, "File", listOf(c.newFile, c.newProject, c.openFolder, c.browseFolder, null, c.save, c.saveAll, c.toggleAutoSave, null, c.closeTab, c.closeFolder, null, c.renameFile))
+        MenuButton(ide, "File", listOf(c.newFile, c.newProject, c.openFolder, c.browseFolder, null, c.save, c.saveAll, c.toggleAutoSave, null, c.closeTab, c.closeFolder, null, c.renameFile, c.saveTemplate))
         MenuButton(ide, "Edit", listOf(c.comment, c.duplicate, c.deleteLine, null, c.moveUp, c.moveDown, null, c.indent, c.outdent))
         MenuButton(ide, "View", listOf(c.palette, c.quickOpen, c.goToLine, null, c.showExplorer, c.showSearch, c.showGit, c.showEnv, null, c.toggleSidebar, c.toggleTerminal, c.todoList, null, c.zoomIn, c.zoomOut, c.zoomReset))
         MenuButton(ide, "Terminal", listOf(c.newTerminal, c.closeTerminal, c.clearTerminal, null, c.toggleTerminal))

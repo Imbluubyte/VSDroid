@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
@@ -145,7 +146,16 @@ private fun ExtCard(ide: IdeState, info: ExtInfo) {
                 }
                 CardButton(if (showLogs) "Hide log" else "Log") { showLogs = !showLogs }
             }
-            CardButton("Uninstall", danger = true) { ide.dialog = Dialog.ExtUninstall(info.dirName, info.title) }
+            Spacer(Modifier.weight(1f))
+            Box(
+                Modifier
+                    .size(32.dp)
+                    .background(Vs.inputBg, RoundedCornerShape(2.dp))
+                    .clickable { ide.dialog = Dialog.ExtUninstall(info.dirName, info.title) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Filled.Delete, contentDescription = "Uninstall", tint = Vs.error, modifier = Modifier.size(18.dp))
+            }
         }
         if (m != null) {
             Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {

@@ -45,6 +45,10 @@ class ProblemsState(private val scope: CoroutineScope, private val ide: IdeState
     var scanning by mutableStateOf(false)
         private set
 
+    /** Warnings the user dismissed: "relative path<TAB>rule id<TAB>message". Saved in the project's .vsdroid folder. */
+    private val dismissed: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    private var dismissedRoot: String? = null
+
     private val index = ProjectIndex()
     private var scanJob: Job? = null
     private val tabJobs = HashMap<String, Job>()
@@ -90,6 +94,7 @@ class ProblemsState(private val scope: CoroutineScope, private val ide: IdeState
             recount()
             return
         }
+        ensureDismissed()
         val open = ide.tabs.associate { it.file.path to it.value.text }
         scanning = true
         scanJob = scope.launch {
@@ -130,7 +135,7 @@ class ProblemsState(private val scope: CoroutineScope, private val ide: IdeState
         for (s in sources) index.update(s.file.path, ProjectIndex.wordsOf(s.text))
         val out = HashMap<String, List<Diagnostic>>()
         for (s in sources) {
-            val list = Diagnostics.analyze(s.text, Languages.forFile(s.file.name), options(s.file))
+            val list = visible(s.file.path, Diagnostics.analyze(s.text, Languages.forFile(s.file.name), options(s.file)))
             if (list.isNotEmpty()) out[s.file.path] = list
         }
         return out
@@ -143,8 +148,86 @@ class ProblemsState(private val scope: CoroutineScope, private val ide: IdeState
         files.clear()
         terminal.clear()
         index.clear()
+        dismissedRoot = null
         scanning = false
         recount()
+    }
+
+    // ---- dismissed warnings --------------------------------------------------------------------------
+
+    private fun dismissFile(root: File) = File(File(root, ".vsdroid"), "dismissed.txt")
+
+    private fun keyOf(path: String, d: Diagnostic): String {
+        val root = ide.root
+        val rel = if (root != null) File(path).relativeToOrSelf(root).path else path
+        return (rel + "\t" + d.code + "\t" + d.message).replace('\n', ' ')
+    }
+
+    /** Loads the dismissed list of the open project (once per project). */
+    private fun ensureDismissed() {
+        val root = ide.root
+        if (root == null) {
+            dismissed.clear()
+            dismissedRoot = null
+            return
+        }
+        if (dismissedRoot == root.path) return
+        dismissed.clear()
+        dismissedRoot = root.path
+        try {
+            val f = dismissFile(root)
+            if (f.isFile) f.readLines().filter { it.isNotBlank() }.forEach { dismissed.add(it) }
+        } catch (e: Exception) {
+            // An unreadable list just means nothing is dismissed.
+        }
+    }
+
+    private fun saveDismissed() {
+        val root = ide.root ?: return
+        try {
+            val f = dismissFile(root)
+            if (dismissed.isEmpty()) {
+                f.delete()
+            } else {
+                f.parentFile?.mkdirs()
+                f.writeText(dismissed.sorted().joinToString("\n") + "\n")
+            }
+        } catch (e: Exception) {
+            ide.toast("Could not save the dismissed warnings: ${e.message}")
+        }
+    }
+
+    /** Hides dismissed warnings. Errors are never hidden. */
+    private fun visible(path: String, list: List<Diagnostic>): List<Diagnostic> {
+        if (dismissed.isEmpty() || list.isEmpty()) return list
+        return list.filterNot { it.severity == Severity.WARNING && keyOf(path, it) in dismissed }
+    }
+
+    /** Dismisses warning [d] of [path]: it stops being underlined and listed, also after restarting. */
+    fun dismiss(path: String, d: Diagnostic) {
+        if (d.severity != Severity.WARNING) return
+        ensureDismissed()
+        if (!dismissed.add(keyOf(path, d))) return
+        saveDismissed()
+        ide.tabs.firstOrNull { it.file.path == path }?.let { it.diagnostics = visible(path, it.diagnostics) }
+        files[path]?.let { list ->
+            val kept = visible(path, list)
+            if (kept.isEmpty()) files.remove(path) else files[path] = kept
+        }
+        recount()
+    }
+
+    /** Brings back every dismissed warning of the open project. */
+    fun restoreDismissed() {
+        ensureDismissed()
+        if (dismissed.isEmpty()) {
+            ide.toast("No dismissed warnings")
+            return
+        }
+        dismissed.clear()
+        saveDismissed()
+        ide.toast("Dismissed warnings restored")
+        settingsChanged()
     }
 
     // ---- open files ------------------------------------------------------------------------------
@@ -175,9 +258,10 @@ class ProblemsState(private val scope: CoroutineScope, private val ide: IdeState
         val text = tab.value.text
         val opts = options(tab.file)
         val lang = tab.language
+        ensureDismissed()
         val list = withContext(Dispatchers.Default) {
             index.update(tab.file.path, ProjectIndex.wordsOf(text))
-            Diagnostics.analyze(text, lang, opts)
+            visible(tab.file.path, Diagnostics.analyze(text, lang, opts))
         }
         if (tab.value.text != text) return // edited meanwhile; the next run will replace this one
         tab.diagnostics = list
@@ -278,7 +362,7 @@ class ProblemsState(private val scope: CoroutineScope, private val ide: IdeState
         if (extra.isEmpty() && fromExt.isEmpty()) return tab.diagnostics
         val text = tab.value.text
         val out = ArrayList<Diagnostic>(tab.diagnostics)
-        out.addAll(fromExt)
+        out.addAll(visible(tab.file.path, fromExt))
         for (p in extra) {
             val range = lineRange(text, p.line) ?: continue
             out.add(Diagnostic(range.first, range.last + 1, p.line, 1, Severity.ERROR, "Terminal: ${p.message}", "terminal"))
@@ -288,7 +372,7 @@ class ProblemsState(private val scope: CoroutineScope, private val ide: IdeState
 
     /** Problems of a file for the Problems tab: the live results for an open file, else the last scan, plus terminal lines. */
     fun forFile(path: String): List<Diagnostic> {
-        val base = (files[path] ?: emptyList()) + if (extOn) extDiagnostics(path) else emptyList()
+        val base = (files[path] ?: emptyList()) + if (extOn) visible(path, extDiagnostics(path)) else emptyList()
         val extra = terminal.filter { it.path == path }
         if (extra.isEmpty()) return base
         return base + extra.map { Diagnostic(0, 1, it.line, 1, Severity.ERROR, "Terminal: ${it.message}", "terminal") }

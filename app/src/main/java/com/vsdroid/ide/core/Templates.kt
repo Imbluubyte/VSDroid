@@ -22,7 +22,7 @@ object Templates {
 
     private const val CS_IGNORE = "bin/\nobj/\n.vs/\n*.user\n"
 
-    val all: List<Template> = listOf(
+    val builtIn: List<Template> = listOf(
         Template("python", "Python", "main.py, requirements.txt, README, .gitignore", wantsVenv = true) { name ->
             mapOf(
                 "main.py" to "def main():\n    print(\"Hello from $name!\")\n\n\nif __name__ == \"__main__\":\n    main()\n",
@@ -106,8 +106,106 @@ object Templates {
                 ".gitignore" to "build/\n",
             )
         },
+        Template("lua", "Lua", "main.lua, README") { name ->
+            mapOf(
+                "main.lua" to "local function main()\n    print(\"Hello from $name!\")\nend\n\nmain()\n",
+                "README.md" to "# $name\n\nA Lua project.\n\n## Run\n\n```\nlua main.lua\n```\n",
+            )
+        },
         Template("empty", "Empty Folder", "Just a folder") { _ -> emptyMap() },
     )
+
+    // ---- user templates (File > Save as Template) -----------------------------------------------
+
+    /** Folder that holds saved templates; set by the app at start-up. Each template is a sub-folder. */
+    var userDir: File? = null
+
+    private const val META = "template.txt"
+    private const val FILES = "files"
+    private const val MAX_FILES = 500
+    private const val MAX_FILE_BYTES = 1_000_000L
+    private val SKIP_DIRS = setOf(".git", ".venv", "venv", "node_modules", "bin", "obj", "build", ".vs", "__pycache__", ".vsdroid", ".gradle")
+
+    /** Built-in templates followed by the ones the user saved. */
+    fun available(): List<Template> = builtIn + userTemplates()
+
+    private fun userTemplates(): List<Template> {
+        val dir = userDir ?: return emptyList()
+        val folders = dir.listFiles { f -> f.isDirectory }?.sortedBy { it.name.lowercase() } ?: return emptyList()
+        val out = ArrayList<Template>()
+        for (folder in folders) {
+            try {
+                val lines = File(folder, META).takeIf { it.isFile }?.readLines() ?: continue
+                val name = lines.getOrNull(0)?.trim().orEmpty().ifEmpty { folder.name }
+                val desc = lines.getOrNull(1)?.trim().orEmpty()
+                val filesDir = File(folder, FILES)
+                out.add(Template("user:" + folder.name, name, desc.ifEmpty { "Saved template" }) { _ ->
+                    val map = LinkedHashMap<String, String>()
+                    filesDir.walkTopDown().filter { it.isFile }.forEach { f ->
+                        map[f.relativeTo(filesDir).path] = f.readText()
+                    }
+                    map
+                })
+            } catch (e: Exception) {
+                // A damaged template folder is skipped rather than breaking the New Project dialog.
+            }
+        }
+        return out
+    }
+
+    /** True when a template with this name was already saved. */
+    fun userTemplateExists(name: String): Boolean {
+        val dir = userDir ?: return false
+        return File(dir, sanitize(name)).exists()
+    }
+
+    /**
+     * Saves the text files of [project] as a new template called [name]. Build folders, virtual environments,
+     * .git and binary or very large files are left out. Returns the number of files saved.
+     */
+    fun saveFromProject(project: File, name: String, description: String): Int {
+        val dir = userDir ?: error("Templates folder is not available")
+        val cleanName = name.trim()
+        require(cleanName.isNotEmpty()) { "Give the template a name" }
+        val target = File(dir, sanitize(cleanName))
+        require(!target.exists()) { "A template named \"$cleanName\" already exists" }
+        val filesDir = File(target, FILES)
+        var count = 0
+        try {
+            check(filesDir.mkdirs()) { "Could not create ${filesDir.path}" }
+            val queue = ArrayDeque<File>()
+            queue.add(project)
+            while (queue.isNotEmpty() && count < MAX_FILES) {
+                val d = queue.removeFirst()
+                for (f in d.listFiles().orEmpty().sortedBy { it.name }) {
+                    if (f.isDirectory) {
+                        if (f.name !in SKIP_DIRS) queue.add(f)
+                    } else if (f.length() <= MAX_FILE_BYTES && isText(f) && count < MAX_FILES) {
+                        val dest = File(filesDir, f.relativeTo(project).path)
+                        dest.parentFile?.mkdirs()
+                        f.copyTo(dest)
+                        count++
+                    }
+                }
+            }
+            val desc = description.trim().replace(Regex("\\s+"), " ")
+            File(target, META).writeText(cleanName.replace(Regex("\\s+"), " ") + "\n" + desc + "\n")
+        } catch (e: Exception) {
+            target.deleteRecursively()
+            throw e
+        }
+        return count
+    }
+
+    private fun isText(f: File): Boolean = try {
+        f.inputStream().use { input ->
+            val buf = ByteArray(8000)
+            val n = input.read(buf)
+            (0 until maxOf(n, 0)).none { buf[it].toInt() == 0 }
+        }
+    } catch (e: Exception) {
+        false
+    }
 
     /** Creates the project folder under [parent] and writes the template files. */
     fun create(parent: File, rawName: String, template: Template): File {

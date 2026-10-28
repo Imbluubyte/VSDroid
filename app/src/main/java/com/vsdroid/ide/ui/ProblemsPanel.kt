@@ -134,16 +134,29 @@ fun ProblemsPanel(ide: IdeState) {
                                 Text("${d.line}:${d.column}", color = Vs.textDim, fontSize = 11.sp, modifier = Modifier.padding(start = 6.dp))
                             }
                             val fix = d.fix
-                            if (fix != null) {
+                            val canDismiss = d.severity == Severity.WARNING
+                            if (fix != null || canDismiss) {
                                 Spacer(Modifier.size(4.dp))
-                                Text(
-                                    fix.title, color = Color.White, fontSize = 12.sp,
-                                    modifier = Modifier
-                                        .padding(start = 16.dp)
-                                        .background(Vs.accent, RoundedCornerShape(10.dp))
-                                        .clickable { p.applyFix(row.path, d) }
-                                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                                )
+                                Row(Modifier.padding(start = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    if (fix != null) {
+                                        Text(
+                                            fix.title, color = Color.White, fontSize = 12.sp,
+                                            modifier = Modifier
+                                                .background(Vs.accent, RoundedCornerShape(10.dp))
+                                                .clickable { p.applyFix(row.path, d) }
+                                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                                        )
+                                    }
+                                    if (canDismiss) {
+                                        Text(
+                                            "Dismiss", color = Vs.text, fontSize = 12.sp,
+                                            modifier = Modifier
+                                                .background(Vs.inputBg, RoundedCornerShape(10.dp))
+                                                .clickable { p.dismiss(row.path, d) }
+                                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

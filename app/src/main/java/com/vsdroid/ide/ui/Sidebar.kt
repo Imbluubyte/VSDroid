@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.NoteAdd
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.ChevronRight
@@ -186,6 +187,9 @@ fun ExplorerPanel(ide: IdeState) {
             )
             SmallIconButton(Icons.Filled.NoteAdd, "New File", { ide.dialog = Dialog.NewFile(root, false) })
             SmallIconButton(Icons.Filled.CreateNewFolder, "New Folder", { ide.dialog = Dialog.NewFile(root, true) })
+            if (ide.cutFile != null) {
+                SmallIconButton(Icons.Filled.ContentPaste, "Paste into project folder", { ide.pasteInto(root) })
+            }
             SmallIconButton(Icons.Filled.Refresh, "Refresh", { ide.refreshTree() })
         }
 
@@ -224,6 +228,11 @@ private fun ExplorerRow(row: TreeRow, ide: IdeState) {
                 .fillMaxWidth()
                 .height(34.dp)
                 .background(if (active) Vs.activeRow else Color.Transparent)
+                .onSecondaryClick {
+                    // Right-click behaves like a long press: select the row and show its menu.
+                    ide.selectedFile = f
+                    ide.openMenu = menuId
+                }
                 .combinedClickable(
                     onClick = {
                         if (f.isDirectory) ide.expanded[f.path] = !open else ide.openFile(f)
@@ -248,7 +257,7 @@ private fun ExplorerRow(row: TreeRow, ide: IdeState) {
                 Icon(Icons.Filled.Description, null, tint = fileColor(f), modifier = Modifier.padding(start = 2.dp).size(18.dp))
             }
             Text(
-                f.name, color = if (active) Vs.textBright else Vs.text, fontSize = 13.sp,
+                f.name, color = if (ide.cutFile == f) Vs.textDim else if (active) Vs.textBright else Vs.text, fontSize = 13.sp,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 6.dp),
             )
         }
@@ -265,6 +274,14 @@ private fun ExplorerRow(row: TreeRow, ide: IdeState) {
             DropdownMenuItem(text = { Text("New Folder...", color = Vs.text) }, onClick = {
                 ide.openMenu = null; ide.dialog = Dialog.NewFile(parent, true)
             })
+            DropdownMenuItem(text = { Text("Cut", color = Vs.text) }, onClick = {
+                ide.openMenu = null; ide.cut(f)
+            })
+            if (ide.cutFile != null) {
+                DropdownMenuItem(text = { Text("Paste into ${parent.name}", color = Vs.text) }, onClick = {
+                    ide.openMenu = null; ide.pasteInto(parent)
+                })
+            }
             DropdownMenuItem(text = { Text("Rename...", color = Vs.text) }, onClick = {
                 ide.openMenu = null; ide.dialog = Dialog.Rename(f)
             })

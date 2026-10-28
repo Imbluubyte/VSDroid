@@ -322,6 +322,22 @@ fun IdeDialogs(ide: IdeState, commands: Commands) {
             }
         }
 
+        is Dialog.SaveTemplate -> {
+            var name by remember { mutableStateOf("") }
+            var desc by remember { mutableStateOf("") }
+            val go = { if (name.isNotBlank()) { if (ide.saveAsTemplate(name, desc)) dismiss() } }
+            VsDialog("Save as Template", dismiss, "Save", go) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.width(420.dp)) {
+                    DialogField(name, { name = it }, "Template name", go)
+                    DialogField(desc, { desc = it }, "Short description", go, autoFocus = false)
+                    Text(
+                        "Saves the text files of this project (not .git, virtual environments or build folders) so it appears in New Project.",
+                        color = Vs.textDim, fontSize = 12.sp,
+                    )
+                }
+            }
+        }
+
         is Dialog.Rename -> {
             var name by remember { mutableStateOf(d.file.name) }
             val go = { if (name.isNotBlank()) { ide.rename(d.file, name); dismiss() } }
@@ -497,7 +513,8 @@ fun IdeDialogs(ide: IdeState, commands: Commands) {
 @Composable
 private fun NewProjectDialog(ide: IdeState) {
     var name by remember { mutableStateOf("") }
-    var template by remember { mutableStateOf(Templates.all.first()) }
+    val templates = remember { Templates.available() }
+    var template by remember { mutableStateOf(templates.first()) }
     var makeVenv by remember { mutableStateOf(true) }
     val dismiss = { ide.dialog = null }
 
@@ -506,7 +523,7 @@ private fun NewProjectDialog(ide: IdeState) {
             try {
                 val dir = Templates.create(ide.workspace, name, template)
                 ide.openFolder(dir)
-                val first = listOf("main.py", "Program.cs", "index.html", "index.js", "main.cpp", "README.md")
+                val first = listOf("main.py", "main.lua", "Program.cs", "index.html", "index.js", "main.cpp", "README.md")
                     .map { File(dir, it) }.firstOrNull { it.isFile }
                 if (first != null) ide.openFile(first)
                 if (template.wantsVenv && makeVenv && ide.termuxInstalled) ide.createVenv(".venv")
@@ -522,7 +539,7 @@ private fun NewProjectDialog(ide: IdeState) {
             DialogField(name, { name = it }, "Project name", go)
             Text("Template", color = Vs.textDim, fontSize = 12.sp)
             Column(Modifier.heightIn(max = 260.dp).verticalScroll(rememberScrollState())) {
-                Templates.all.forEach { t ->
+                templates.forEach { t ->
                     TemplateRow(t, t == template) { template = t }
                 }
             }
