@@ -7,7 +7,7 @@ package com.vsdroid.ide.core
 object Completion {
     private val IDENT = Regex("[A-Za-z_][A-Za-z0-9_]*")
 
-    private fun isIdentChar(c: Char) = c.isLetterOrDigit() || c == '_'
+    fun isIdentChar(c: Char) = c.isLetterOrDigit() || c == '_'
 
     /** Returns (start index, typed prefix) of the word that ends at [cursor]. */
     fun wordBefore(text: String, cursor: Int): Pair<Int, String> {

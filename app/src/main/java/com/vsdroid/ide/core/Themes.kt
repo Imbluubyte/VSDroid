@@ -188,7 +188,17 @@ object ThemeManager {
     var userThemes by mutableStateOf<List<AppTheme>>(emptyList())
         private set
 
-    val all: List<AppTheme> get() = listOf(Themes.dark, Themes.light) + userThemes
+    /** Themes added by extensions, by extension id. */
+    var extensionThemes by mutableStateOf<Map<String, List<AppTheme>>>(emptyMap())
+        private set
+
+    val all: List<AppTheme> get() = listOf(Themes.dark, Themes.light) + userThemes + extensionThemes.values.flatten()
+
+    /** Replaces the themes of one extension (an empty list removes them). If the active theme vanishes, the dark theme is shown. */
+    fun setExtensionThemes(extId: String, themes: List<AppTheme>) {
+        extensionThemes = if (themes.isEmpty()) extensionThemes - extId else extensionThemes + (extId to themes)
+        if (all.none { it.id == current.id }) current = Themes.dark
+    }
 
     /** Points the manager at the themes folder and selects [selectedId]. Returns load errors by file name. */
     fun load(dir: File, selectedId: String): Map<String, String> {

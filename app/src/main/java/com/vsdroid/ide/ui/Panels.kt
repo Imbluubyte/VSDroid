@@ -50,6 +50,13 @@ import androidx.compose.material.icons.filled.DataObject
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.Notes
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -210,9 +217,39 @@ fun ActivityBar(ide: IdeState, c: Commands) {
         if (ide.hasPython) {
             ActivityItem(Icons.Filled.DataObject, "Python environments", ide.sidebarVisible && ide.sideView == SideView.ENV) { c.showEnv.run() }
         }
+        if (ide.extensions.enabled) {
+            ActivityItem(Icons.Filled.Extension, "Extensions", ide.sidebarVisible && ide.sideView == SideView.EXTENSIONS) { c.showExtensions.run() }
+            ide.extensions.version // redraw when extensions add or remove panels
+            for (p in ide.extensions.manager.panels) {
+                ActivityItem(
+                    extPanelIcon(p.icon), p.title,
+                    ide.sidebarVisible && ide.sideView == SideView.EXT_PANEL && ide.extPanelKey == p.key,
+                ) {
+                    if (ide.sidebarVisible && ide.sideView == SideView.EXT_PANEL && ide.extPanelKey == p.key) ide.sidebarVisible = false
+                    else ide.showExtensionPanel(p.key)
+                }
+            }
+        }
         Spacer(Modifier.weight(1f))
         ActivityItem(Icons.Filled.Terminal, "Terminal", ide.terminalVisible) { c.toggleTerminal.run() }
     }
+}
+
+/** Icon for an extension panel, by the icon name the extension gave. Unknown names get a generic icon. */
+private fun extPanelIcon(name: String): ImageVector = when (name.lowercase()) {
+    "list", "notes" -> Icons.Filled.Notes
+    "check", "todo", "tasks" -> Icons.Filled.CheckBox
+    "code" -> Icons.Filled.Code
+    "search" -> Icons.Filled.Search
+    "bug", "problems" -> Icons.Filled.BugReport
+    "folder", "files" -> Icons.Filled.FolderOpen
+    "settings" -> Icons.Filled.Settings
+    "terminal" -> Icons.Filled.Terminal
+    "star" -> Icons.Filled.Star
+    "bookmark" -> Icons.Filled.Bookmark
+    "build", "tools" -> Icons.Filled.Build
+    "doc", "document" -> Icons.Filled.Description
+    else -> Icons.Filled.Widgets
 }
 
 @Composable

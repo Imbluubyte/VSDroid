@@ -29,6 +29,9 @@ class AppSettings(val file: File) {
     /** Extra names the problem checker should treat as defined, for libraries it does not know. */
     var knownGlobals by mutableStateOf<List<String>>(emptyList())
 
+    /** Master switch for extensions. When off, no extension runs. */
+    var extensionsEnabled by mutableStateOf(true)
+
     /** Id of the active theme: "dark", "light", or the file name of a theme in the themes folder. */
     var theme by mutableStateOf("dark")
 
@@ -50,6 +53,7 @@ class AppSettings(val file: File) {
                 knownGlobals = (0 until a.length()).map { a.optString(it, "").trim() }.filter { it.isNotEmpty() }
             }
             theme = o.optString("theme", theme).ifBlank { "dark" }
+            extensionsEnabled = o.optBoolean("extensionsEnabled", extensionsEnabled)
             setupDone = o.optBoolean("setupDone", true)
             keybindings.clear()
             o.optJSONObject("keybindings")?.let { kb ->
@@ -77,6 +81,7 @@ class AppSettings(val file: File) {
             o.put("partialImportThreshold", partialImportThreshold)
             o.put("knownGlobals", org.json.JSONArray(knownGlobals))
             o.put("theme", theme)
+            o.put("extensionsEnabled", extensionsEnabled)
             o.put("setupDone", setupDone)
             val kb = JSONObject()
             keybindings.toSortedMap().forEach { (k, v) -> kb.put(k, v) }

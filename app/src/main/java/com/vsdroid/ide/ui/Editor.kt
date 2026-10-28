@@ -100,7 +100,8 @@ fun CodeEditor(tab: EditorTab, ide: IdeState, modifier: Modifier = Modifier) {
     val vScroll = rememberScrollState()
     val hScroll = rememberScrollState()
     val focus = remember { FocusRequester() }
-    val transformation = remember(tab, ThemeManager.current) { SyntaxTransformation(tab) }
+    val languageVersion = ide.extensions.languageVersion
+    val transformation = remember(tab, ThemeManager.current, languageVersion) { SyntaxTransformation(tab) }
 
     var layout by remember(tab) { mutableStateOf<TextLayoutResult?>(null) }
     var selectedSuggestion by remember(tab) { mutableIntStateOf(0) }
@@ -108,9 +109,19 @@ fun CodeEditor(tab: EditorTab, ide: IdeState, modifier: Modifier = Modifier) {
 
     val text = tab.value.text
     val cursor = tab.value.selection.end
-    val suggestions = remember(text, cursor, dismissedAt) {
+    val extVersion = ide.extensions.version
+    val suggestions = remember(text, cursor, dismissedAt, extVersion) {
         if (tab.value.selection.collapsed && dismissedAt != cursor) {
-            Completion.suggest(text, cursor, tab.language)
+            val base = Completion.suggest(text, cursor, tab.language)
+            // Words from extensions come first; they are only asked for when the caret sits at the end of a word.
+            val prefix = Completion.wordBefore(text, cursor).second
+            val atWordEnd = cursor >= text.length || !Completion.isIdentChar(text[cursor])
+            val fromExt = if (atWordEnd && prefix.length >= 2 && !prefix[0].isDigit()) {
+                ide.extensions.completions(tab, text, cursor, prefix)
+            } else {
+                emptyList()
+            }
+            if (fromExt.isEmpty()) base else (fromExt + base).distinct().take(8)
         } else {
             emptyList()
         }
@@ -204,6 +215,7 @@ fun CodeEditor(tab: EditorTab, ide: IdeState, modifier: Modifier = Modifier) {
                             selectedSuggestion = 0
                             tab.diagnostics = Diagnostics.remap(old.text, tab.value.text, tab.diagnostics)
                             ide.problems.onEdited(tab)
+                            ide.extensions.edited(tab)
                         }
                         if (ide.autoSave && tab.dirty) ide.save(tab)
                     },

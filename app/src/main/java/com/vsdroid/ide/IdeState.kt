@@ -39,7 +39,8 @@ import java.io.File
 class EditorTab(val file: File, initial: String) {
     var value by mutableStateOf(TextFieldValue(initial))
     var savedText by mutableStateOf(initial)
-    val language: Language = Languages.forFile(file.name)
+    /** Looked up each time, so a language an extension adds (or removes) applies to files that are already open. */
+    val language: Language get() = Languages.forFile(file.name)
     val dirty: Boolean get() = value.text != savedText
 
     /** Bumped when the user jumps to a line, so the editor scrolls to it. */
@@ -50,7 +51,7 @@ class EditorTab(val file: File, initial: String) {
     var diagnostics by mutableStateOf<List<com.vsdroid.ide.core.Diagnostic>>(emptyList())
 }
 
-enum class SideView { EXPLORER, SEARCH, GIT, PROBLEMS, ENV }
+enum class SideView { EXPLORER, SEARCH, GIT, PROBLEMS, ENV, EXTENSIONS, EXT_PANEL }
 
 enum class PkgState { INSTALLING, INSTALLED, FAILED }
 
@@ -69,6 +70,9 @@ sealed class Dialog {
     object GitIdentity : Dialog()
     object GitAddRemote : Dialog()
     data class GitDiscard(val change: GitChange) : Dialog()
+    /** Review and approve what an extension may do. [dirName] is the extension's folder name. */
+    data class ExtPermissions(val dirName: String) : Dialog()
+    data class ExtUninstall(val dirName: String, val name: String) : Dialog()
 }
 
 class IdeState(
@@ -160,6 +164,34 @@ class IdeState(
 
     val git = GitState(context, scope, workspace, { root }, { toast(it) }, { reloadFromDisk() })
 
+    /** Set by [Commands] when it is created. Extensions use it to run the IDE's own commands. */
+    var commands: Commands? = null
+
+    /** Extensions (see IdeExtensions.kt). Started in the last init block below. */
+    val extensions = IdeExtensions(context, this)
+
+    /** Key of the extension panel shown in the side bar (extension id + "/" + panel id). */
+    var extPanelKey by mutableStateOf<String?>(null)
+        private set
+
+    fun showExtensionPanel(key: String) {
+        extPanelKey = key
+        sideView = SideView.EXT_PANEL
+        sidebarVisible = true
+        extensions.manager.panelShown(key)
+    }
+
+    /** Runs [command] in the shown terminal (a new one when it is busy), optionally in [cwd]. */
+    fun runInTerminal(command: String, cwd: String?) {
+        terminalVisible = true
+        val term = terminalForRun()
+        cwd?.let { File(it) }?.takeIf { it.isDirectory }?.let { term.cwd = it }
+        term.run(command)
+    }
+
+    /** Set by MainActivity: opens the system file picker for a .vsdext package. */
+    var onRequestInstallExtension: () -> Unit = {}
+
     // Search panel state
     var searchQuery by mutableStateOf("")
     var searchCaseSensitive by mutableStateOf(false)
@@ -201,6 +233,7 @@ class IdeState(
         t.onFinished = {
             if (sidebarVisible && sideView == SideView.GIT) git.refresh()
             problems.captureTerminal(t, t.lastExitCode)
+            extensions.manager.fire("terminal.finished", t.lastExitCode)
         }
         return t
     }
@@ -262,9 +295,11 @@ class IdeState(
         refreshProjectInfo()
         problems.clear()
         problems.scanProject()
+        extensions.fileEvent("project.opened", dir.path)
     }
 
     fun closeFolder() {
+        root?.let { extensions.fileEvent("project.closed", it.path) }
         root = null
         git.reset()
         tabs.clear()
@@ -416,6 +451,7 @@ class IdeState(
         tabs.add(tab)
         activeTab = tab
         problems.analyzeNow(tab)
+        extensions.fileEvent("file.opened", file.path)
         if (line > 0) jump(tab, line)
     }
 
@@ -443,6 +479,7 @@ class IdeState(
         try {
             t.file.writeText(t.value.text)
             t.savedText = t.value.text
+            extensions.fileEvent("file.saved", t.file.path)
             if (t.file.absolutePath == settings.file.absolutePath) reloadSettings()
             if (root?.let { TodoStore.fileFor(it).absolutePath } == t.file.absolutePath) loadTodos()
             if (t.file.extension.equals("json", ignoreCase = true) && t.file.parentFile?.absolutePath == ThemeManager.dir?.absolutePath) {
@@ -568,6 +605,8 @@ class IdeState(
         val i = tabs.indexOf(tab)
         tabs.remove(tab)
         if (activeTab == tab) activeTab = tabs.getOrNull((i - 1).coerceAtLeast(0))
+        extensions.manager.forgetFile(tab.file.path)
+        extensions.fileEvent("file.closed", tab.file.path)
     }
 
     fun nextTab(step: Int) {
@@ -836,6 +875,8 @@ class IdeState(
             prefs.edit().remove("lastRoot").apply()
             toast("The last project could not be reopened")
         }
+        extensions.start()
+        extensions.manager.fire("app.ready")
     }
 }
 

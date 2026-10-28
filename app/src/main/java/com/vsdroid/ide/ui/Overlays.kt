@@ -107,7 +107,7 @@ fun Palette(ide: IdeState, c: Commands) {
     val commandMode = query.text.startsWith(">")
     val q = query.text.removePrefix(">").trim()
 
-    val items: List<PaletteItem> = remember(query.text, files, root) {
+    val items: List<PaletteItem> = remember(query.text, files, root, ide.extensions.version) {
         if (commandMode) {
             c.all
                 .mapNotNull { cmd -> Searcher.fuzzyScore(cmd.title, q)?.let { cmd to it } }
@@ -207,7 +207,7 @@ fun Palette(ide: IdeState, c: Commands) {
 // ---- Dialogs ------------------------------------------------------------------------------------
 
 @Composable
-private fun DialogField(
+internal fun DialogField(
     value: String,
     onChange: (String) -> Unit,
     label: String,
@@ -249,7 +249,7 @@ private fun DialogField(
  * can cancel it. Dialogs sit at the top centre so the on-screen keyboard never covers them.
  */
 @Composable
-private fun DialogFrame(
+internal fun DialogFrame(
     title: String,
     onDismiss: () -> Unit,
     buttons: @Composable RowScope.() -> Unit,
@@ -286,7 +286,7 @@ private fun DialogFrame(
 }
 
 @Composable
-private fun VsDialog(
+internal fun VsDialog(
     title: String,
     onDismiss: () -> Unit,
     confirmText: String,
@@ -307,6 +307,7 @@ private fun VsDialog(
 
 @Composable
 fun IdeDialogs(ide: IdeState, commands: Commands) {
+    ExtAskDialog(ide)
     val d = ide.dialog ?: return
     val dismiss = { ide.dialog = null }
 
@@ -467,6 +468,9 @@ fun IdeDialogs(ide: IdeState, commands: Commands) {
                 color = Vs.text, fontSize = 14.sp,
             )
         }
+
+        is Dialog.ExtPermissions -> ExtPermissionsDialog(ide, d.dirName, dismiss)
+        is Dialog.ExtUninstall -> ExtUninstallDialog(ide, d.dirName, d.name, dismiss)
 
         is Dialog.GoToLine -> {
             var text by remember { mutableStateOf("") }

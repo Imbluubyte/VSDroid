@@ -19,7 +19,16 @@ Claude is the lead developer, so make decisions, explain briefly, and keep the a
 - `core/` – no UI: `Languages`, `Syntax`, `Completion`, `Search`, `Templates`, `EditorOps` (auto-indent, auto-close, backspace rules),
   `Settings` (settings.json), `Setup` (first-launch guide: Termux shell scripts, `SetupState`), `Themes` (theme keys, built-in Dark/Light, JSON parsing/validation, `ThemeManager` state), `TerminalSession`, `TermuxBridge`, `Venv`, `PackageIndex`,
   `Todo` (per-project to-do list, stored in `.vsdroid/todo.json`), `Diagnostics` + `DiagLexer`/`DiagPython`/`DiagBrace`/`DiagMisc`/`DiagData` (problem checker, pure Kotlin, tested with kotlinc on sample code; `ProblemsState.kt` runs it), `TermErrors` (terminal error to file:line), `Git` (pure Kotlin: shell-script builders + `git status` parser, no Android; tested against real git), `GitState` (Source Control state/actions, runs the scripts via `TermuxBridge`).
+- `core/ext/` – the extension runtime, no Android (see Extensions below). `IdeExtensions.kt` (app package) connects it to the app.
 - `ui/` – `ProblemsPanel` (Problems tab), `Editor` (also draws the squiggles), `Sidebar` (explorer/search/env/package browser), `GitPanel` (Source Control tab), `Panels` (title bar, tabs, terminal), `Todo` (To-Do dropdown), `Overlays` (palette + dialogs), `Settings` (settings window with tabs), `Setup` (first-launch setup guide), `Theme` (`Vs` colour object, reads the active theme).
+
+## Extensions
+Lua (LuaJ `org.luaj:luaj-jse:3.0.1`) extensions, docs in `docs/EXTENSIONS.md`, examples in `examples/extensions/` (folder name = extension id).
+- `core/ext/`: `MiniJson`, `Manifest` (permissions, `extension.json`, `Utf8Pos`), `LuaConv`, `Host` (`HostBridge` = everything an extension may do to the IDE), `ExtRuntime` (sandboxed Lua + the `vsd` API), `ExtensionManager` (lifecycle, approval/hash, events, providers, panels, runs everything on ONE background thread), `ExtInstaller` (.vsdext).
+- `IdeExtensions.kt` implements `HostBridge`: hops to the main thread (never the other way round, so a stuck extension can't freeze the UI), owns the ask-dialog queue, cached `Command` objects for extension commands (`Commands.all = builtin + extension commands`), completion/diagnostic hooks. UI in `ui/Extensions.kt`.
+- State: `VSDroid/extensions/`, `extension-data/`, `extensions.json` (approvals + SHA-256 of each folder). Master switch `extensionsEnabled` in settings.json.
+- Test on a PC without Android: `tools/ext-tests/run.sh path/to/luaj-jse.jar` (kotlinc + java). Run it after ANY change in `core/ext/`; it also runs the example extensions.
+- Rules: extension thread never calls into UI state directly; positions in the Lua API are 1-based UTF-8 byte offsets (`Utf8Pos`); keep the sandbox closed (new `vsd` functions must check `need(Permission...)`).
 
 ## Settings
 `VSDroid/settings.json` in shared storage (`AppSettings`). Edited via the Settings screen (Ctrl+,) or by opening the file in VSDroid; saving it in the editor reloads it.
