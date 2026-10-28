@@ -104,7 +104,7 @@ object Languages {
         "and break do else elseif end false for function goto if in local nil not or repeat return then true until while"
     private const val LUA_BUILTINS =
         "print require pairs ipairs table string math io os type tostring tonumber setmetatable " +
-            "getmetatable pcall error assert select unpack"
+            "getmetatable pcall error assert select unpack vsd"
 
     private const val SH_KW =
         "if then else elif fi for while until do done case esac function in select time export local " +

@@ -4,7 +4,6 @@
 - [x] **Git/GitHub tab** in the sidebar (status, stage, commit, push/pull, clone; via Termux `git`; auto `safe.directory` fix) – done, see below
 - [x] **Consistent APK signing** (a fixed release keystore stored as GitHub secrets, so builds can update over each other) – done, see below
 - [x] **Custom themes**: built-in Light, user themes from JSON files, theme picker + create/import in Settings > Appearance – done. Not done yet (ideas): bundled Dracula / Catppuccin Mocha theme files
-- [ ] **Custom templates** (user-defined project templates; ties in with the setup guide)
 - [x] **To-Do list dropdown** per project in the top bar (stored in the project, e.g. `.vsdroid/todo.json`)
 - [x] **Settings button in the top bar** (its own button, out of the File menu)
 - [x] **Esc closes the open menu/dialog**, with save prompts where needed
@@ -31,6 +30,7 @@
 - Project templates (C# template uses `class Program` / `Main`)
 - Settings window (General / Keybinds / Appearance tabs) + `settings.json`, rebindable keyboard shortcuts, F1 shortcut list, F2 rename
 - Backspace removes a whole indent level; auto-close pairs are deleted together
+- QoL update: quotes auto-close after string prefixes (Python `f"`, `r"`, `b"`, C++ `u8"`); dismissable warnings (saved in `.vsdroid/dismissed.txt`); mouse right-click acts as long press (explorer menu, word select in the editor); explorer Cut/Paste into folders; icon-only extension Uninstall; Lua project template; File > Save as Template (custom templates); `vsd` is a known name in Lua files
 - Run support for Python, C#, Java, JavaScript, TypeScript, Kotlin, C/C++, Lua, shell
 - Renamed from TabCode to VSDroid
 - Esc closes the topmost menu, dialog, command palette or settings screen (dialogs are now in-window overlays; the unsaved-changes prompt treats Esc as Cancel, so nothing is lost). Gear button for Settings in the top bar, and the General settings rows no longer carry hint text

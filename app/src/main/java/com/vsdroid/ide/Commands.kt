@@ -151,13 +151,17 @@ class Commands(private val ide: IdeState) {
         val f = ide.selectedFile ?: ide.activeTab?.file
         if (f == null) ide.toast("Select a file first") else ide.dialog = Dialog.Rename(f)
     }
+    val restoreDismissed = Command("problems.restoreDismissed", "Problems: Restore Dismissed Warnings") { ide.problems.restoreDismissed() }
+    val saveTemplate = Command("file.saveTemplate", "File: Save as Template...") {
+        if (ide.root == null) ide.toast("Open a project first") else ide.dialog = Dialog.SaveTemplate
+    }
     val openSettings = Command("app.settings", "Preferences: Open Settings", "Ctrl+,") { ide.settingsOpen = true }
 
     /** The IDE's own commands. */
     val builtin: List<Command> = listOf(
-        newFile, newProject, openFolder, browseFolder, closeFolder, save, saveAll, closeTab, toggleAutoSave, renameFile,
+        newFile, newProject, openFolder, browseFolder, closeFolder, save, saveAll, closeTab, toggleAutoSave, renameFile, saveTemplate,
         quickOpen, palette, goToLine,
-        toggleSidebar, toggleTerminal, todoList, showExplorer, showSearch, showGit, showProblems, nextProblem, quickFix, fullscreen, showEnv, zoomIn, zoomOut, zoomReset,
+        toggleSidebar, toggleTerminal, todoList, showExplorer, showSearch, showGit, showProblems, nextProblem, quickFix, restoreDismissed, fullscreen, showEnv, zoomIn, zoomOut, zoomReset,
         nextTab, prevTab,
         comment, duplicate, deleteLine, moveUp, moveDown, indent, outdent,
         runFile, newVenv, gitClone, gitPull, gitPush, clearTerminal, newTerminal, closeTerminal, help, setupGuide, openSettings,

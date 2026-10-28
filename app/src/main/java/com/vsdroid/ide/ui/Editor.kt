@@ -226,6 +226,20 @@ fun CodeEditor(tab: EditorTab, ide: IdeState, modifier: Modifier = Modifier) {
                     modifier = Modifier
                         .heightIn(min = minHeight)
                         .padding(top = 4.dp, end = 120.dp, bottom = 240.dp)
+                        .onSecondaryClick { pos ->
+                            // Right-click does what a long press does: focus the editor and select the word there.
+                            try {
+                                focus.requestFocus()
+                            } catch (e: IllegalStateException) {
+                                // Not attached yet.
+                            }
+                            val l = layout?.takeIf { it.layoutInput.text.text == tab.value.text }
+                            if (l != null && tab.value.text.isNotEmpty()) {
+                                val offset = l.getOffsetForPosition(pos).coerceIn(0, tab.value.text.length)
+                                val word = l.getWordBoundary(offset)
+                                tab.value = tab.value.copy(selection = TextRange(word.start, word.end))
+                            }
+                        }
                         .focusRequester(focus)
                         .onPreviewKeyEvent { e ->
                             if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
@@ -313,6 +327,17 @@ fun CodeEditor(tab: EditorTab, ide: IdeState, modifier: Modifier = Modifier) {
                     here.message, color = Vs.text, fontSize = 13.sp, maxLines = 2,
                     modifier = Modifier.weight(1f),
                 )
+                if (here.severity == Severity.WARNING) {
+                    Text(
+                        "Dismiss",
+                        color = Vs.text,
+                        fontSize = 13.sp,
+                        modifier = Modifier
+                            .background(Vs.inputBg)
+                            .clickable { ide.problems.dismiss(tab.file.path, here) }
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                    )
+                }
                 val fix = here.fix
                 if (fix != null) {
                     Text(

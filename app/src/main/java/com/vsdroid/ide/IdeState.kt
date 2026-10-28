@@ -20,6 +20,7 @@ import com.vsdroid.ide.core.SetupState
 import com.vsdroid.ide.core.StoragePaths
 import com.vsdroid.ide.core.TodoItem
 import com.vsdroid.ide.core.TodoStore
+import com.vsdroid.ide.core.Templates
 import com.vsdroid.ide.core.Searcher
 import com.vsdroid.ide.core.TerminalSession
 import com.vsdroid.ide.core.ThemeException
@@ -57,6 +58,7 @@ enum class PkgState { INSTALLING, INSTALLED, FAILED }
 
 sealed class Dialog {
     object NewProject : Dialog()
+    object SaveTemplate : Dialog()
     data class NewFile(val parent: File, val folder: Boolean) : Dialog()
     data class Rename(val file: File) : Dialog()
     data class Delete(val file: File) : Dialog()
@@ -90,6 +92,9 @@ class IdeState(
 
     /** Folder that holds all projects ("workspace"). */
     val workspace: File = File(Environment.getExternalStorageDirectory(), "VSDroidProjects").also { it.mkdirs() }
+
+    /** Templates saved with File > Save as Template live next to settings.json. */
+    val templatesDir: File = File(settings.file.parentFile, "templates").also { Templates.userDir = it }
 
     var root by mutableStateOf<File?>(null)
         private set
@@ -134,6 +139,9 @@ class IdeState(
 
     /** Set when the explorer row was tapped last; used by the Rename File shortcut. */
     var selectedFile by mutableStateOf<File?>(null)
+
+    /** File or folder marked with "Cut" in the explorer, waiting to be pasted into a folder. */
+    var cutFile by mutableStateOf<File?>(null)
 
     /** Called after settings.json is reloaded so shortcuts can be re-applied. */
     var onSettingsReloaded: () -> Unit = {}
@@ -669,6 +677,83 @@ class IdeState(
         }
         tabs.filter { it.file == file || it.file.path.startsWith(file.path + "/") }.forEach { closeTab(it) }
         if (root == file) closeFolder()
+        refreshTree()
+    }
+
+    /** File > Save as Template: stores the open project as a template. Returns true on success. */
+    fun saveAsTemplate(name: String, description: String): Boolean {
+        val project = root
+        if (project == null) {
+            toast("Open a project first")
+            return false
+        }
+        return try {
+            val n = Templates.saveFromProject(project, name, description)
+            toast("Saved template \"${name.trim()}\" ($n files)")
+            true
+        } catch (e: Exception) {
+            toast(e.message ?: "Could not save the template")
+            false
+        }
+    }
+
+    /** Explorer "Cut": remember [file]; "Paste" then moves it into a folder. */
+    fun cut(file: File) {
+        if (file == root) {
+            toast("The project folder can't be moved")
+            return
+        }
+        cutFile = file
+    }
+
+    /** Explorer "Paste": move the cut file or folder into [destDir]. */
+    fun pasteInto(destDir: File) {
+        val src = cutFile ?: return
+        if (!src.exists()) {
+            toast("\"${src.name}\" no longer exists")
+            cutFile = null
+            return
+        }
+        if (!destDir.isDirectory) {
+            toast("Choose a folder to paste into")
+            return
+        }
+        if (destDir.path == src.path || destDir.path.startsWith(src.path + "/")) {
+            toast("A folder can't be moved into itself")
+            return
+        }
+        if (destDir == src.parentFile) {
+            // Already there: nothing to do.
+            cutFile = null
+            return
+        }
+        val target = File(destDir, src.name)
+        if (target.exists()) {
+            toast("\"${src.name}\" already exists in ${destDir.name}")
+            return
+        }
+        // Open tabs inside the moved path are saved first (so nothing is lost), closed, then re-opened at the new location.
+        val affected = tabs.filter { it.file == src || it.file.path.startsWith(src.path + "/") }
+        affected.filter { it.dirty }.forEach { save(it) }
+        val reopen = affected.map { it.file }
+        val wasActive = activeTab?.file
+        val moved = try {
+            src.renameTo(target) || (src.copyRecursively(target, overwrite = false) && src.deleteRecursively())
+        } catch (e: Exception) {
+            false
+        }
+        if (!moved) {
+            // A partial copy must not be left behind next to the original.
+            if (target.exists() && src.exists()) target.deleteRecursively()
+            toast("Could not move ${src.name}")
+            return
+        }
+        affected.forEach { closeTab(it) }
+        fun newPath(f: File): File = if (f == src) target else File(target, f.relativeTo(src).path)
+        reopen.filter { it != wasActive }.forEach { openFile(newPath(it)) }
+        wasActive?.takeIf { it in reopen }?.let { openFile(newPath(it)) }
+        expanded[destDir.path] = true
+        cutFile = null
         refreshTree()
     }
 

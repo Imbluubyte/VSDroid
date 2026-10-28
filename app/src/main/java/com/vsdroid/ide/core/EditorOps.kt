@@ -10,6 +10,25 @@ object EditorOps {
     private val PAIRS = mapOf('(' to ')', '[' to ']', '{' to '}', '"' to '"', '\'' to '\'', '`' to '`')
     private val CLOSERS = setOf(')', ']', '}', '"', '\'', '`')
 
+    private val PY_PREFIXES = setOf("f", "r", "b", "u", "fr", "rf", "br", "rb")
+    private val CPP_PREFIXES = setOf("l", "u", "u8", "r", "lr", "ur", "u8r")
+
+    /**
+     * True when the identifier characters directly before the quote at [quoteIndex] are a string prefix of [lang]
+     * (e.g. the `f` in Python's f"..."), so the quote opens a string rather than sitting inside a word.
+     */
+    private fun isStringPrefix(text: String, quoteIndex: Int, lang: Language): Boolean {
+        val prefixes = when (lang.id) {
+            "python" -> PY_PREFIXES
+            "cpp" -> CPP_PREFIXES
+            else -> return false
+        }
+        var i = quoteIndex
+        while (i > 0 && (text[i - 1].isLetterOrDigit() || text[i - 1] == '_')) i--
+        if (i == quoteIndex) return false
+        return text.substring(i, quoteIndex).lowercase() in prefixes
+    }
+
     private fun lineStart(text: String, index: Int): Int {
         var i = index
         while (i > 0 && text[i - 1] != '\n') i--
@@ -64,8 +83,10 @@ object EditorOps {
             val prev: Char? = n.getOrNull(pos - 2)
             val nextOk = next == null || next.isWhitespace() || next in CLOSERS || next == ',' || next == ';' || next == ':'
             val isQuote = typed == '"' || typed == '\'' || typed == '`'
-            // Don't auto-close quotes in the middle of a word (e.g. the apostrophe in "don't").
-            val prevOk = !isQuote || prev == null || !(prev.isLetterOrDigit() || prev == '_')
+            // Don't auto-close quotes in the middle of a word (e.g. the apostrophe in "don't"),
+            // but do after a string prefix such as Python's f"..." / rb"..." or C++'s u8"...".
+            val prevOk = !isQuote || prev == null || !(prev.isLetterOrDigit() || prev == '_') ||
+                isStringPrefix(n, pos - 1, lang)
             if (nextOk && prevOk) {
                 val text = n.substring(0, pos) + closer + n.substring(pos)
                 return TextFieldValue(text, TextRange(pos))

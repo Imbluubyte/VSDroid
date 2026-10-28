@@ -14,7 +14,9 @@ Kotlin + Jetpack Compose, no Electron, no WebView.
 - Several terminals at once: tabs above the terminal, "+" for a new one, Ctrl+Shift+` too. Each terminal has its own folder, output and running program. Run opens a new terminal when the shown one is busy
 - Open a project with the system file manager: File > Browse for Folder (or the Browse button in File > Open Folder). Works for folders in Internal storage and on SD cards
 - Python virtual environments (create, activate, delete, pip install, requirements.txt)
-- New project templates: Python, C# console / library / web API, Web, Node.js, C++ (CMake), empty
+- New project templates: Python, C# console / library / web API, Web, Node.js, C++ (CMake), Lua, empty. File > Save as Template turns the open project into your own template (stored in `VSDroid/templates`)
+- Explorer: right-click (mouse) or long-press for the file menu, Cut / Paste to move files and folders into other folders
+- Warnings (yellow underlines) can be dismissed from the editor or the Problems tab; "Problems: Restore Dismissed Warnings" brings them back
 - Source Control tab (Ctrl+Shift+G): see changes, stage/unstage/discard, commit, push, pull, fetch, initialize a repository, add a remote, clone from GitHub, sign in with a personal access token. Uses `git` inside Termux
 - Problems: red underlines for syntax errors and undefined names, yellow underlines for unused imports and for `import x` where only a few members are used (the Problems tab, Ctrl+Shift+M, suggests e.g. `from random import randint`). Works for Python, C#, Java, Kotlin, JavaScript/TypeScript, C/C++, Lua and JSON. F8 jumps to the next problem, Ctrl+. applies the quick fix. A line the terminal complained about after running code is underlined too. Add `# noqa` or `// vsd-ignore` to a line to silence it; `knownGlobals` in settings.json lists names from libraries the checker does not know
 - Full screen (F11) hides the Android status and navigation bars
