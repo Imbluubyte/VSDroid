@@ -167,6 +167,17 @@ private fun GeneralTab(ide: IdeState, close: () -> Unit) {
     )
 
     Spacer(Modifier.height(20.dp))
+    SectionTitle("Extensions")
+    SettingRow("Enable extensions") {
+        Switch(checked = s.extensionsEnabled, onCheckedChange = { s.extensionsEnabled = it; s.save(); ide.extensions.setEnabled(it) })
+    }
+    Text(
+        "Extensions are small Lua programs that add commands, panels, problem checks, themes and more. " +
+            "They only run after you approve what they may do. Turning this off stops all of them.",
+        color = Vs.textDim, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp),
+    )
+
+    Spacer(Modifier.height(20.dp))
     SectionTitle("Settings file")
     Text(s.file.path, color = Vs.textDim, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -244,7 +255,9 @@ internal fun ThemeRow(t: AppTheme, selected: Boolean, onClick: () -> Unit) {
         Column(Modifier.padding(start = 12.dp)) {
             Text(t.name, color = Vs.textBright, fontSize = 14.sp)
             Text(
-                if (t.builtIn) "Built-in · ${if (t.dark) "dark" else "light"}" else "${t.id} · ${if (t.dark) "dark" else "light"} base",
+                if (t.builtIn) "Built-in · ${if (t.dark) "dark" else "light"}"
+                else if (t.id.startsWith("ext:")) "From extension ${t.id.removePrefix("ext:").substringBefore('/')} · ${if (t.dark) "dark" else "light"} base"
+                else "${t.id} · ${if (t.dark) "dark" else "light"} base",
                 color = Vs.textDim, fontSize = 12.sp,
             )
         }

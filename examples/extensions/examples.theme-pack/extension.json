@@ -1,0 +1,10 @@
+{
+  "id": "examples.theme-pack",
+  "name": "Theme Pack",
+  "version": "1.0.0",
+  "description": "Two colour themes: Catppuccin Mocha and Dracula. Pick them in Settings > Appearance.",
+  "author": "VSDroid",
+  "apiVersion": 1,
+  "permissions": [],
+  "themes": ["themes/catppuccin-mocha.json", "themes/dracula.json"]
+}

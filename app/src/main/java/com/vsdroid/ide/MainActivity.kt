@@ -1,6 +1,9 @@
 package com.vsdroid.ide
 
 import android.content.Intent
+import com.vsdroid.ide.core.ext.ExtInstaller
+import com.vsdroid.ide.ui.ExtensionViewPanel
+import com.vsdroid.ide.ui.ExtensionsPanel
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -133,6 +136,26 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /** System file manager for "Install extension" (.vsdext packages). */
+    private val extensionPicker =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri != null) installExtensionFrom(uri)
+        }
+
+    private fun installExtensionFrom(uri: Uri) {
+        val ide = ideRef ?: return
+        try {
+            val bytes = contentResolver.openInputStream(uri)?.use { Themes.readLimited(it, ExtInstaller.MAX_PACKAGE_BYTES) }
+            if (bytes == null) {
+                ide.toast("That file is too large to be an extension package")
+                return
+            }
+            ide.extensions.installPackage(bytes)
+        } catch (e: Exception) {
+            ide.toast("Could not read that file: ${e.message ?: "unknown error"}")
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
@@ -200,6 +223,8 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(ide.fullscreen) { applyFullscreen(ide.fullscreen) }
         ide.onRequestPickFolder = { launchFolderPicker() }
         ide.onRequestImportTheme = { themePicker.launch(arrayOf("*/*")) }
+        ide.onRequestInstallExtension = { extensionPicker.launch(arrayOf("*/*")) }
+        LaunchedEffect(ide.activeTab) { ide.extensions.activated(ide.activeTab) }
         ide.onRequestTermuxPermission = {
             if (TermuxBridge.isInstalled(this)) termuxPermission.launch(TermuxBridge.PERMISSION)
             else ide.toast("Termux is not installed")
@@ -263,6 +288,8 @@ private fun IdeScreen(ide: IdeState, c: Commands) {
                             SideView.GIT -> GitPanel(ide)
                             SideView.PROBLEMS -> ProblemsPanel(ide)
                             SideView.ENV -> if (ide.hasPython) EnvPanel(ide) else ExplorerPanel(ide)
+                            SideView.EXTENSIONS -> ExtensionsPanel(ide)
+                            SideView.EXT_PANEL -> ExtensionViewPanel(ide)
                         }
                     }
                 }

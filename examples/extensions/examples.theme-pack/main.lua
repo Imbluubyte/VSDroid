@@ -1,0 +1,1 @@
+-- This extension only adds themes (see extension.json). Nothing to run.

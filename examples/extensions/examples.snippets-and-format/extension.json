@@ -1,0 +1,9 @@
+{
+  "id": "examples.snippets-and-format",
+  "name": "Snippets and Tidy",
+  "version": "1.0.0",
+  "description": "Adds a few completion snippets for Python and Lua, and a formatter that trims trailing spaces and ends the file with a newline (Edit: Format Document).",
+  "author": "VSDroid",
+  "apiVersion": 1,
+  "permissions": ["editor.write"]
+}

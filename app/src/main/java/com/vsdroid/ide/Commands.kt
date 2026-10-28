@@ -103,6 +103,18 @@ class Commands(private val ide: IdeState) {
     val help = Command("help.shortcuts", "Help: Keyboard Shortcuts", "F1") { ide.dialog = Dialog.Help }
     val setupGuide = Command("help.setup", "Help: Setup Guide") { ide.openSetup() }
 
+    val formatDocument = Command("edit.format", "Edit: Format Document", "Shift+Alt+F") { ide.extensions.formatActive() }
+    val showExtensions = Command("view.extensions", "View: Show Extensions", "Ctrl+Shift+X") { showSide(SideView.EXTENSIONS) }
+    val installExtension = Command("ext.install", "Extensions: Install from File...") { ide.onRequestInstallExtension() }
+    val reloadExtensions = Command("ext.reload", "Extensions: Reload All") {
+        if (ide.extensions.enabled) {
+            ide.extensions.manager.reloadAll()
+            ide.toast("Extensions reloaded")
+        } else {
+            ide.toast("Extensions are switched off in Settings")
+        }
+    }
+
     private fun lineOfCursor(tab: EditorTab): Int {
         val t = tab.value.text
         val c = tab.value.selection.end.coerceIn(0, t.length)
@@ -141,19 +153,25 @@ class Commands(private val ide: IdeState) {
     }
     val openSettings = Command("app.settings", "Preferences: Open Settings", "Ctrl+,") { ide.settingsOpen = true }
 
-    val all: List<Command> = listOf(
+    /** The IDE's own commands. */
+    val builtin: List<Command> = listOf(
         newFile, newProject, openFolder, browseFolder, closeFolder, save, saveAll, closeTab, toggleAutoSave, renameFile,
         quickOpen, palette, goToLine,
         toggleSidebar, toggleTerminal, todoList, showExplorer, showSearch, showGit, showProblems, nextProblem, quickFix, fullscreen, showEnv, zoomIn, zoomOut, zoomReset,
         nextTab, prevTab,
         comment, duplicate, deleteLine, moveUp, moveDown, indent, outdent,
         runFile, newVenv, gitClone, gitPull, gitPush, clearTerminal, newTerminal, closeTerminal, help, setupGuide, openSettings,
+        formatDocument, showExtensions, installExtension, reloadExtensions,
     )
+
+    /** Built-in commands followed by the ones extensions added. */
+    val all: List<Command> get() = builtin + ide.extensions.commandList()
 
     /** The command whose shortcut is being recorded in Settings, or null. */
     var recording by mutableStateOf<Command?>(null)
 
     init {
+        ide.commands = this
         applyBindings()
         ide.onSettingsReloaded = { applyBindings() }
         if (!ide.settings.file.exists()) persist()
@@ -165,7 +183,8 @@ class Commands(private val ide: IdeState) {
     }
 
     private fun persist() {
-        ide.settings.keybindings.clear()
+        // Keep the shortcuts of extensions that are not loaded right now, so they come back with the extension.
+        ide.settings.keybindings.keys.removeAll { !it.startsWith("ext.") }
         all.forEach { ide.settings.keybindings[it.id] = it.shortcut }
         ide.settings.save()
     }
@@ -256,6 +275,7 @@ class Commands(private val ide: IdeState) {
      */
     fun dismissTopLayer(): Boolean {
         when {
+            ide.extensions.currentAsk != null -> ide.extensions.cancelAsks()
             ide.openMenu != null -> ide.openMenu = null
             ide.dialog != null -> ide.dialog = null
             ide.paletteOpen -> ide.paletteOpen = false
@@ -281,7 +301,7 @@ class Commands(private val ide: IdeState) {
         }
         if (combo == "Escape") return dismissTopLayer()
         // Dialogs are overlays inside this window, so keep the editor shortcuts from firing behind them.
-        if (ide.dialog != null || ide.setupOpen) return false
+        if (ide.dialog != null || ide.setupOpen || ide.extensions.currentAsk != null) return false
         val cmd = all.firstOrNull { it.shortcut.isNotEmpty() && it.shortcut.equals(combo, ignoreCase = true) }
             ?: when (combo) {
                 "Ctrl+J" -> toggleTerminal

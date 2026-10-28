@@ -18,12 +18,13 @@
 - [x] **Debugging update**: problem underlines, Problems tab, quick fixes, terminal-error underlines, F11 full screen – done, see below. Not done yet (ideas): type checking, a real debugger (breakpoints, stepping), JSX/TSX, "fix all" for a whole file
 
 ## After the public release
-- [ ] **Extension API** (very low priority). Will be similar to VSCode, this is a huge thing to implement so it'll take a while and we'll leave it until all core features are done
+- [ ] Extension ideas: an extension gallery/registry, more panel elements (tables, progress), editor decorations, language servers
 
 ## Known bugs / to investigate
 - [ ] The first `dotnet run` in a brand-new C# project is very slow or appears to hang (restore/first-run work; the terminal prints nothing meanwhile). Existing, already-built projects run fine.
 
 ## Done
+- **Extension API**: Lua extensions (LuaJ) with permissions, sandbox and time limits; commands, side panels, problem checks, completions, formatters, languages, themes, events, storage, files, terminal/process, HTTP. Docs in `docs/EXTENSIONS.md`, examples in `examples/extensions/`, tests in `tools/ext-tests/`
 - Dark+ layout, explorer, tabs, syntax highlighting, word autocomplete, file and keyword search
 - Termux or Android-shell terminal with interactive input (`input()`, `Console.ReadLine()`, ...)
 - Python venvs and a package browser (shown only for projects containing .py files)

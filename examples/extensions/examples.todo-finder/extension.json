@@ -1,0 +1,9 @@
+{
+  "id": "examples.todo-finder",
+  "name": "TODO Finder",
+  "version": "1.0.0",
+  "description": "Underlines TODO and FIXME comments as problems and lists them in a side panel. Tap one to jump to it.",
+  "author": "VSDroid",
+  "apiVersion": 1,
+  "permissions": ["editor.read"]
+}

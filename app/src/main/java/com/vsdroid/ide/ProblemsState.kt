@@ -59,10 +59,21 @@ class ProblemsState(private val scope: CoroutineScope, private val ide: IdeState
         project = index,
     )
 
+    /** Problems reported by extensions (the extension manager keeps them; this state only refreshes what is shown). */
+    private val extOn: Boolean get() = ide.extensions.enabled
+
+    /** Extensions found new problems (or none): update the counters. */
+    fun extChanged() = recount()
+
     private fun recount() {
         var e = terminal.size
         var w = 0
         for (list in files.values) for (d in list) if (d.severity == Severity.ERROR) e++ else w++
+        if (extOn) {
+            val (xe, xw) = ide.extensions.manager.problemCounts()
+            e += xe
+            w += xw
+        }
         errorCount = e
         warningCount = w
     }
@@ -263,9 +274,11 @@ class ProblemsState(private val scope: CoroutineScope, private val ide: IdeState
     fun forTab(tab: EditorTab): List<Diagnostic> {
         if (!enabled) return emptyList()
         val extra = terminal.filter { it.path == tab.file.path }
-        if (extra.isEmpty()) return tab.diagnostics
+        val fromExt = if (extOn) ide.extensions.diagnostics(tab) else emptyList()
+        if (extra.isEmpty() && fromExt.isEmpty()) return tab.diagnostics
         val text = tab.value.text
         val out = ArrayList<Diagnostic>(tab.diagnostics)
+        out.addAll(fromExt)
         for (p in extra) {
             val range = lineRange(text, p.line) ?: continue
             out.add(Diagnostic(range.first, range.last + 1, p.line, 1, Severity.ERROR, "Terminal: ${p.message}", "terminal"))
@@ -275,7 +288,7 @@ class ProblemsState(private val scope: CoroutineScope, private val ide: IdeState
 
     /** Problems of a file for the Problems tab: the live results for an open file, else the last scan, plus terminal lines. */
     fun forFile(path: String): List<Diagnostic> {
-        val base = files[path] ?: emptyList()
+        val base = (files[path] ?: emptyList()) + if (extOn) extDiagnostics(path) else emptyList()
         val extra = terminal.filter { it.path == path }
         if (extra.isEmpty()) return base
         return base + extra.map { Diagnostic(0, 1, it.line, 1, Severity.ERROR, "Terminal: ${it.message}", "terminal") }
@@ -285,7 +298,15 @@ class ProblemsState(private val scope: CoroutineScope, private val ide: IdeState
     fun filesWithProblems(): List<String> {
         val paths = HashSet<String>(files.keys)
         terminal.forEach { paths.add(it.path) }
+        if (extOn) paths.addAll(ide.extensions.manager.paths().filter { extDiagnostics(it).isNotEmpty() })
         return paths.sortedWith(compareBy({ p -> if (forFile(p).any { it.severity == Severity.ERROR }) 0 else 1 }, { it }))
+    }
+
+    /** Extension problems of [path]: for an open file, against its current text. */
+    private fun extDiagnostics(path: String): List<Diagnostic> {
+        ide.extensions.version // refresh when extensions report something new
+        val tab = ide.tabs.firstOrNull { it.file.path == path }
+        return if (tab != null) ide.extensions.manager.diagnosticsFor(path, tab.value.text) else ide.extensions.manager.diagnosticsFor(path)
     }
 
     private fun lineRange(text: String, line: Int): IntRange? {

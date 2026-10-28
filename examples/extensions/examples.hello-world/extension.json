@@ -1,0 +1,9 @@
+{
+  "id": "examples.hello-world",
+  "name": "Hello World",
+  "version": "1.0.0",
+  "description": "The smallest useful extension: one command that asks your name and says hello.",
+  "author": "VSDroid",
+  "apiVersion": 1,
+  "permissions": []
+}

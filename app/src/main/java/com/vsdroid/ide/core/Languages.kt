@@ -191,8 +191,40 @@ object Languages {
         "md" to "markdown", "markdown" to "markdown",
     )
 
+    // ---- languages added by extensions ----------------------------------------------------------------
+
+    /** A language an extension adds, with the file extensions and exact file names it applies to. */
+    class Extra(val language: Language, val extensions: List<String>, val fileNames: List<String>)
+
+    private val extraOwners = LinkedHashMap<String, List<Extra>>()
+
+    @Volatile
+    private var extraByExt: Map<String, Language> = emptyMap()
+
+    @Volatile
+    private var extraByName: Map<String, Language> = emptyMap()
+
+    /** Replaces everything [owner] (an extension id) added. Pass an empty list to remove it. Safe to call from any thread. */
+    @Synchronized
+    fun setExtra(owner: String, items: List<Extra>) {
+        if (items.isEmpty()) extraOwners.remove(owner) else extraOwners[owner] = items
+        val byExt = HashMap<String, Language>()
+        val byName = HashMap<String, Language>()
+        for (list in extraOwners.values) for (x in list) {
+            for (e in x.extensions) byExt[e.lowercase()] = x.language
+            for (n in x.fileNames) byName[n.lowercase()] = x.language
+        }
+        extraByExt = byExt
+        extraByName = byName
+    }
+
+    /** Built-in languages followed by those added by extensions. */
+    fun allLanguages(): List<Language> = all + synchronized(this) { extraOwners.values.flatten().map { it.language } }
+
     fun forFile(name: String): Language {
         val lower = name.lowercase()
+        extraByName[lower]?.let { return it }
+        extraByExt[lower.substringAfterLast('.', "")]?.let { return it }
         val special = when (lower) {
             "dockerfile", "makefile" -> "shell"
             ".gitignore", ".env" -> "toml"

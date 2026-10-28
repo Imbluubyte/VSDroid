@@ -21,7 +21,15 @@ Kotlin + Jetpack Compose, no Electron, no WebView.
 - Keyboard shortcuts (press F1 in the app for the full list); Esc closes the topmost menu, dialog, command palette or settings screen
 - Auto-indent, auto-closing brackets and quotes, comment toggle, move/duplicate/delete line
 
-Not included, by design: extensions, debugging.
+Not included, by design: debugging.
+
+## Extensions
+
+VSDroid has an extension system. Extensions are small Lua programs that add commands, side panels, problem checks,
+completions, formatters, languages and themes. Open the **Extensions** tab (Ctrl+Shift+X) to install one (a `.vsdext`
+file or a folder in `VSDroid/extensions/`). Each extension lists what it wants to do and only runs after you approve it;
+it runs in a sandbox and can't freeze the app. Settings > Extensions turns the whole system off.
+How to write one: [docs/EXTENSIONS.md](docs/EXTENSIONS.md). Examples: [examples/extensions](examples/extensions).
 
 ## Building the APK (no PC needed)
 
