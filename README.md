@@ -3,7 +3,7 @@
 [![Join the Discord](https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/vpkU62pe4Q)
 
 **Hey Guys**
-Bluu here, just wanted to say thanks for checking out the project, just a disclaimer, this project was built by Claude, I take no credit for this project which is why you can redistribute it, fork it, and loads of other stuff that my tiny brain doesn't understand, as long as you don't profit from it. I know a lot of people get angry at people who vibe-code, but it's pretty useful, especially if you're still new to programming and need a piece of Software that doesn't exist or you can't afford. In my case, my laptop broke, and so far I've had no luck with customer support to get it fixed, I needed somewhere to write my code so I could keep practicing, and that's why I asked Claude to make VSDroid.
+Bluu here, just wanted to say thanks for checking out the project, just a disclaimer, this project was built by Claude, I take no credit for this project which is why you can redistribute it, fork it, and loads of other stuff that my tiny brain doesn't understand. I know a lot of people get angry at people who vibe-code, but it's pretty useful, especially if you're still new to programming and need a piece of Software that doesn't exist or you can't afford. In my case, my laptop broke, and so far I've had no luck with customer support to get it fixed, I needed somewhere to write my code so I could keep practicing, and that's why I asked Claude to make VSDroid.
 
 I know I know, Acode exists, but even with extensions it lacks so many useful features and workflow improvements, VSDroid is built to work out of the box.
 
