@@ -104,11 +104,51 @@ fun Palette(ide: IdeState, c: Commands) {
         ide.paletteOpen = false
     }
 
-    val commandMode = query.text.startsWith(">")
-    val q = query.text.removePrefix(">").trim()
+    val mode = ide.paletteMode
+    val symbolMode = mode == PaletteMode.SYMBOLS || mode == PaletteMode.PROJECT_SYMBOLS || mode == PaletteMode.RESULTS
+    // The symbol and result lists keep their mode; typing ">" in the file list still switches to commands.
+    val commandMode = !symbolMode && query.text.startsWith(">")
+    val q = (if (commandMode) query.text.removePrefix(">") else query.text).trim()
+    val tabForSymbols = ide.activeTab
 
-    val items: List<PaletteItem> = remember(query.text, files, root, ide.extensions.version) {
-        if (commandMode) {
+    val items: List<PaletteItem> = remember(query.text, files, root, ide.extensions.version, mode, ide.intelli.version, ide.intelli.results) {
+        if (symbolMode) {
+            when (mode) {
+                PaletteMode.SYMBOLS -> (tabForSymbols?.let { ide.intelli.outline(it) } ?: emptyList())
+                    .mapNotNull { sym -> Searcher.fuzzyScore(sym.name, q)?.let { sym to it } }
+                    .let { list -> if (q.isEmpty()) list.sortedBy { it.first.start } else list.sortedByDescending { it.second } }
+                    .take(80)
+                    .map { (sym, _) ->
+                        PaletteItem(sym.name, sym.kind.label + (sym.container?.let { " in $it" } ?: "") + "  :" + sym.line) {
+                            close()
+                            tabForSymbols?.let { t ->
+                                t.value = t.value.copy(selection = TextRange(sym.start.coerceIn(0, t.value.text.length)))
+                                t.scrollToLine = sym.line
+                                t.scrollRequest++
+                            }
+                        }
+                    }
+                PaletteMode.PROJECT_SYMBOLS -> ide.intelli.projectSymbols()
+                    .mapNotNull { sym -> Searcher.fuzzyScore(sym.name, q)?.let { sym to it } }
+                    .sortedByDescending { it.second }
+                    .take(80)
+                    .map { (sym, _) ->
+                        PaletteItem(sym.name, sym.kind.label + "  " + ide.intelli.whereOf(sym)) {
+                            close()
+                            ide.intelli.jumpTo(com.vsdroid.ide.core.Location(sym.path, sym.start, sym.end, sym.line, sym.signature))
+                        }
+                    }
+                else -> (ide.intelli.results?.items ?: emptyList())
+                    .filter { q.isEmpty() || ide.intelli.previewOf(it).contains(q, ignoreCase = true) }
+                    .take(300)
+                    .map { loc ->
+                        PaletteItem(loc.preview.ifEmpty { loc.path.substringAfterLast('/') }, loc.path.substringAfterLast('/') + ":" + loc.line) {
+                            close()
+                            ide.intelli.jumpTo(loc)
+                        }
+                    }
+            }
+        } else if (commandMode) {
             c.all
                 .mapNotNull { cmd -> Searcher.fuzzyScore(cmd.title, q)?.let { cmd to it } }
                 .sortedByDescending { it.second }
@@ -174,7 +214,10 @@ fun Palette(ide: IdeState, c: Commands) {
                         }
                     },
             )
-            if (!commandMode && root == null) {
+            if (mode == PaletteMode.RESULTS) {
+                Text(ide.intelli.results?.title ?: "", color = Vs.textDim, fontSize = 12.sp, modifier = Modifier.padding(start = 14.dp, bottom = 4.dp))
+            }
+            if (!commandMode && !symbolMode && root == null) {
                 Text("Open a project to search its files.", color = Vs.textDim, fontSize = 13.sp, modifier = Modifier.padding(12.dp))
             }
             LazyColumn(Modifier.heightIn(max = 380.dp), state = listState) {
@@ -487,6 +530,20 @@ fun IdeDialogs(ide: IdeState, commands: Commands) {
 
         is Dialog.ExtPermissions -> ExtPermissionsDialog(ide, d.dirName, dismiss)
         is Dialog.ExtUninstall -> ExtUninstallDialog(ide, d.dirName, d.name, dismiss)
+
+        is Dialog.RenameSymbol -> {
+            var name by remember { mutableStateOf(d.target.name) }
+            val go = { if (name.isNotBlank() && name != d.target.name) { ide.intelli.rename(d.target, name.trim()) }; dismiss() }
+            VsDialog("Rename Symbol", dismiss, "Rename", go) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.width(420.dp)) {
+                    DialogField(name, { name = it }, "New name for ${d.target.kind.label} \"${d.target.name}\"", go)
+                    Text(
+                        "Every use in the project is renamed, in open files and on disk. Names inside strings and comments are left alone.",
+                        color = Vs.textDim, fontSize = 12.sp,
+                    )
+                }
+            }
+        }
 
         is Dialog.GoToLine -> {
             var text by remember { mutableStateOf("") }

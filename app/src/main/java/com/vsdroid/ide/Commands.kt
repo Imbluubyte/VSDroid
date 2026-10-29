@@ -115,6 +115,37 @@ class Commands(private val ide: IdeState) {
         }
     }
 
+    // IntelliSense
+    private fun needDoc(block: (EditorTab) -> Unit) {
+        val tab = ide.activeTab
+        if (tab == null) ide.toast("Open a file first")
+        else if (!ide.settings.intelliSense) ide.toast("IntelliSense is switched off in Settings")
+        else block(tab)
+    }
+    val triggerSuggest = Command("intelli.suggest", "IntelliSense: Trigger Suggestions", "Ctrl+Space") {
+        needDoc { ide.intelli.triggerSuggestions() }
+    }
+    val quickInfo = Command("intelli.info", "IntelliSense: Show Quick Info", "Ctrl+I") { needDoc { ide.intelli.showInfo(it) } }
+    val goToDefinition = Command("intelli.definition", "IntelliSense: Go to Definition", "F12") { needDoc { ide.intelli.goToDefinition(it) } }
+    val findReferences = Command("intelli.references", "IntelliSense: Find All References", "Shift+F12") { needDoc { ide.intelli.findReferences(it) } }
+    val renameSymbol = Command("intelli.rename", "IntelliSense: Rename Symbol...", "Ctrl+Shift+R") { needDoc { ide.intelli.startRename(it) } }
+    val goToSymbol = Command("nav.symbol", "Go to Symbol in File...", "Ctrl+Shift+O") {
+        if (ide.activeTab == null) {
+            ide.toast("Open a file first")
+        } else {
+            ide.paletteMode = PaletteMode.SYMBOLS
+            ide.paletteOpen = true
+        }
+    }
+    val goToProjectSymbol = Command("nav.projectSymbol", "Go to Symbol in Project...", "Ctrl+T") {
+        if (ide.root == null) {
+            ide.toast("Open a project first")
+        } else {
+            ide.paletteMode = PaletteMode.PROJECT_SYMBOLS
+            ide.paletteOpen = true
+        }
+    }
+
     private fun lineOfCursor(tab: EditorTab): Int {
         val t = tab.value.text
         val c = tab.value.selection.end.coerceIn(0, t.length)
@@ -166,6 +197,7 @@ class Commands(private val ide: IdeState) {
         comment, duplicate, deleteLine, moveUp, moveDown, indent, outdent,
         runFile, newVenv, gitClone, gitPull, gitPush, clearTerminal, newTerminal, closeTerminal, help, setupGuide, openSettings,
         formatDocument, showExtensions, installExtension, reloadExtensions,
+        triggerSuggest, quickInfo, goToDefinition, findReferences, renameSymbol, goToSymbol, goToProjectSymbol,
     )
 
     /** Built-in commands followed by the ones extensions added. */
@@ -289,6 +321,7 @@ class Commands(private val ide: IdeState) {
             }
             ide.setupOpen -> ide.setupOpen = false
             ide.todoOpen -> ide.todoOpen = false
+            ide.intelli.info != null -> ide.intelli.hideInfo()
             else -> return false
         }
         return true

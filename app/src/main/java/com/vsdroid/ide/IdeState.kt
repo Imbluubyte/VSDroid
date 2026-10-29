@@ -72,6 +72,7 @@ sealed class Dialog {
     object GitIdentity : Dialog()
     object GitAddRemote : Dialog()
     data class GitDiscard(val change: GitChange) : Dialog()
+    data class RenameSymbol(val target: com.vsdroid.ide.core.Symbol) : Dialog()
     /** Review and approve what an extension may do. [dirName] is the extension's folder name. */
     data class ExtPermissions(val dirName: String) : Dialog()
     data class ExtUninstall(val dirName: String, val name: String) : Dialog()
@@ -166,6 +167,9 @@ class IdeState(
     /** Source Control tab: runs git inside Termux. */
     /** Problems tab and editor underlines. */
     val problems = ProblemsState(scope, this)
+
+    /** IntelliSense: project symbol index, completion, go to definition, references, rename. */
+    val intelli = IntelliState(scope, this)
 
     /** True while the system bars (status and navigation bar) are hidden (F11). */
     var fullscreen by mutableStateOf(false)
@@ -303,6 +307,8 @@ class IdeState(
         refreshProjectInfo()
         problems.clear()
         problems.scanProject()
+        intelli.clear()
+        intelli.scanProject()
         extensions.fileEvent("project.opened", dir.path)
     }
 
@@ -319,6 +325,7 @@ class IdeState(
         todoOpen = false
         hasPython = false
         problems.clear()
+        intelli.clear()
         prefs.edit().remove("lastRoot").apply()
     }
 
@@ -404,6 +411,7 @@ class IdeState(
         treeVersion++
         refreshProjectInfo()
         problems.scanProject()
+        intelli.scanProject()
     }
 
     /** Looks for Python files so the Python Environments tab only shows up in Python projects. */
@@ -504,6 +512,7 @@ class IdeState(
         ThemeManager.select(settings.theme)
         onSettingsReloaded()
         problems.settingsChanged()
+        intelli.scanProject()
     }
 
     // ---- themes --------------------------------------------------------------------------------
@@ -965,4 +974,4 @@ class IdeState(
     }
 }
 
-enum class PaletteMode { COMMANDS, FILES }
+enum class PaletteMode { COMMANDS, FILES, SYMBOLS, PROJECT_SYMBOLS, RESULTS }

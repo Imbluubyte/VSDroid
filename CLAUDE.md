@@ -20,6 +20,7 @@ Claude is the lead developer, so make decisions, explain briefly, and keep the a
   `Settings` (settings.json), `Setup` (first-launch guide: Termux shell scripts, `SetupState`), `Themes` (theme keys, built-in Dark/Light, JSON parsing/validation, `ThemeManager` state), `TerminalSession`, `TermuxBridge`, `Venv`, `PackageIndex`,
   `Todo` (per-project to-do list, stored in `.vsdroid/todo.json`), `Diagnostics` + `DiagLexer`/`DiagPython`/`DiagBrace`/`DiagMisc`/`DiagData` (problem checker, pure Kotlin, tested with kotlinc on sample code; `ProblemsState.kt` runs it), `TermErrors` (terminal error to file:line), `Git` (pure Kotlin: shell-script builders + `git status` parser, no Android; tested against real git), `GitState` (Source Control state/actions, runs the scripts via `TermuxBridge`).
 - `core/ext/` – the extension runtime, no Android (see Extensions below). `IdeExtensions.kt` (app package) connects it to the app.
+- `core/Symbols*.kt` + `core/Intelli*.kt` – IntelliSense, pure Kotlin like the diagnostics (see IntelliSense below). `IntelliState.kt` (app package) is the glue: project `SymbolIndex`, `docFor(tab)`, go to definition, references, rename.
 - `ui/` – `ProblemsPanel` (Problems tab), `Editor` (also draws the squiggles), `Sidebar` (explorer/search/env/package browser), `GitPanel` (Source Control tab), `Panels` (title bar, tabs, terminal), `Todo` (To-Do dropdown), `Overlays` (palette + dialogs), `Settings` (settings window with tabs), `Setup` (first-launch setup guide), `Theme` (`Vs` colour object, reads the active theme).
 
 ## Extensions
@@ -50,6 +51,12 @@ Shortcuts are stored as `commandId -> "Ctrl+Shift+P"`. New features that need op
 - The project folder may be a sub-folder of the repo; scripts `cd` to the repo top, and `GitChange.path` is relative to that top (`GitState.top`).
 - GitHub login = a personal access token stored by git's `store` helper in Termux `~/.git-credentials` (never in settings.json). Only the exit code/`@@VSD_CODE` marker comes back; the token is not echoed or logged.
 - `Git.kt` can be compiled and exercised without Android (kotlinc + a script that runs the generated scripts against a throw-away repo with a temp `HOME`).
+
+## IntelliSense
+- `Symbols.scan(text, lang)` -> `Symbol`s (kind, container for members, `owner` for locals/params, body ranges). Scanners: `SymbolsPython` (indent frames), `SymbolsLua`, `SymbolsBrace` (+ `SymbolsBraceBase`) for Java/C#/Kotlin/JS/TS/C++. They reuse the diagnostics `Lexer`; when unsure they add nothing.
+- `IntelliData` = built-in member tables per family (`py js cs java kt cpp lua`), `IntelliDoc` = types and members at an offset, `IntelliFeatures.kt` = completion / signature help / quick info / definitions, `IntelliRefs` = references and rename plans (compare owners by `start`, not identity: the index and the live doc scan separately).
+- Feature parity across languages is deliberate; add a language by adding a scanner, a family in `IntelliData.family` and a table.
+- Test without Android: compile `Languages.kt Diag*.kt Diagnostics.kt Symbols*.kt Completion.kt Intelli*.kt` with kotlinc plus a small main that runs samples (including the repo's own Kotlin files, which must not crash the scanner). Keep per-keystroke work cheap: `IntelliState.docFor` skips files over 120k characters.
 
 ## Problems / diagnostics
 - Same categories for every language (see ROADMAP). Don't add advanced checks for one language only; import checks exist for languages with Python-like imports. Prefer missing a problem over a false alarm. Test changes by compiling `core/Diag*.kt` + `Languages.kt` with kotlinc and running sample files, including real project files (the repo's own Kotlin should give no errors).

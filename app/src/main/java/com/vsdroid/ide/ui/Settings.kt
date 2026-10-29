@@ -151,6 +151,20 @@ private fun GeneralTab(ide: IdeState, close: () -> Unit) {
     }
 
     Spacer(Modifier.height(20.dp))
+    SectionTitle("IntelliSense")
+    SettingRow("Smart suggestions, quick info, go to definition, references and rename") {
+        Switch(checked = s.intelliSense, onCheckedChange = { s.intelliSense = it; s.save(); ide.intelli.scanProject() })
+    }
+    SettingRow("Parameter hints while typing a call") {
+        Switch(checked = s.signatureHelp, onCheckedChange = { s.signatureHelp = it; s.save() })
+    }
+    Text(
+        "Works for Python, JavaScript, TypeScript, Java, C#, Kotlin, C++ and Lua. Ctrl+Space suggests, F12 goes to a definition, " +
+            "Ctrl+I shows quick info, Ctrl+Shift+R renames a symbol.",
+        color = Vs.textDim, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp),
+    )
+
+    Spacer(Modifier.height(20.dp))
     SectionTitle("Problems")
     SettingRow("Underline problems (errors, unused imports)") {
         Switch(checked = s.diagnostics, onCheckedChange = { s.diagnostics = it; s.save(); ide.problems.settingsChanged() })

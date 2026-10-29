@@ -29,6 +29,12 @@ class AppSettings(val file: File) {
     /** Extra names the problem checker should treat as defined, for libraries it does not know. */
     var knownGlobals by mutableStateOf<List<String>>(emptyList())
 
+    /** IntelliSense: smart completion, quick info, go to definition, references and rename. */
+    var intelliSense by mutableStateOf(true)
+
+    /** Show the parameter hint above the caret while typing a call. */
+    var signatureHelp by mutableStateOf(true)
+
     /** Master switch for extensions. When off, no extension runs. */
     var extensionsEnabled by mutableStateOf(true)
 
@@ -48,6 +54,8 @@ class AppSettings(val file: File) {
             autoClosePairs = o.optBoolean("autoClosePairs", autoClosePairs)
             terminalOnStart = o.optBoolean("terminalOnStart", terminalOnStart)
             diagnostics = o.optBoolean("diagnostics", diagnostics)
+            intelliSense = o.optBoolean("intelliSense", intelliSense)
+            signatureHelp = o.optBoolean("signatureHelp", signatureHelp)
             partialImportThreshold = o.optInt("partialImportThreshold", partialImportThreshold).coerceIn(0, 5)
             o.optJSONArray("knownGlobals")?.let { a ->
                 knownGlobals = (0 until a.length()).map { a.optString(it, "").trim() }.filter { it.isNotEmpty() }
@@ -78,6 +86,8 @@ class AppSettings(val file: File) {
             o.put("autoClosePairs", autoClosePairs)
             o.put("terminalOnStart", terminalOnStart)
             o.put("diagnostics", diagnostics)
+            o.put("intelliSense", intelliSense)
+            o.put("signatureHelp", signatureHelp)
             o.put("partialImportThreshold", partialImportThreshold)
             o.put("knownGlobals", org.json.JSONArray(knownGlobals))
             o.put("theme", theme)

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
@@ -51,6 +52,10 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
@@ -67,11 +72,15 @@ import com.vsdroid.ide.core.Completion
 import com.vsdroid.ide.core.Diagnostic
 import com.vsdroid.ide.core.Diagnostics
 import com.vsdroid.ide.core.Severity
+import com.vsdroid.ide.core.SymKind
 import com.vsdroid.ide.core.EditorOps
 import com.vsdroid.ide.core.Syntax
 import com.vsdroid.ide.core.ThemeManager
 import kotlin.math.min
 import kotlin.math.roundToInt
+
+/** One line of the suggestion popup. [start] is where the typed prefix begins. */
+private class Sug(val text: String, val kind: SymKind?, val detail: String, val doc: String, val start: Int)
 
 private class SyntaxTransformation(private val tab: EditorTab) : VisualTransformation {
     private var lastText: String? = null
@@ -110,9 +119,20 @@ fun CodeEditor(tab: EditorTab, ide: IdeState, modifier: Modifier = Modifier) {
     val text = tab.value.text
     val cursor = tab.value.selection.end
     val extVersion = ide.extensions.version
-    val suggestions = remember(text, cursor, dismissedAt, extVersion) {
+    var forcedAt by remember(tab) { mutableIntStateOf(-1) }
+    var seenTick by remember { mutableIntStateOf(ide.intelli.forceTick) }
+    val tick = ide.intelli.forceTick
+    LaunchedEffect(tick) {
+        if (tick != seenTick) {
+            seenTick = tick
+            forcedAt = tab.value.selection.end
+            dismissedAt = -1
+        }
+    }
+    val intelliVersion = ide.intelli.version
+    val intelliOn = ide.settings.intelliSense
+    val suggestions = remember(text, cursor, dismissedAt, extVersion, forcedAt, intelliVersion, intelliOn) {
         if (tab.value.selection.collapsed && dismissedAt != cursor) {
-            val base = Completion.suggest(text, cursor, tab.language)
             // Words from extensions come first; they are only asked for when the caret sits at the end of a word.
             val prefix = Completion.wordBefore(text, cursor).second
             val atWordEnd = cursor >= text.length || !Completion.isIdentChar(text[cursor])
@@ -121,10 +141,26 @@ fun CodeEditor(tab: EditorTab, ide: IdeState, modifier: Modifier = Modifier) {
             } else {
                 emptyList()
             }
-            if (fromExt.isEmpty()) base else (fromExt + base).distinct().take(8)
+            val smart = ide.intelli.completions(tab, cursor, forcedAt == cursor, fromExt)
+            if (smart != null && smart.items.isNotEmpty()) {
+                smart.items.map { Sug(it.insert, it.kind, it.detail, it.doc, smart.start) }
+            } else {
+                val base = Completion.suggest(text, cursor, tab.language)
+                val start = Completion.wordBefore(text, cursor).first
+                val words = if (fromExt.isEmpty()) base else (fromExt + base).distinct().take(8)
+                words.map { Sug(it, null, "", "", start) }
+            }
         } else {
             emptyList()
         }
+    }
+    val signature = remember(text, cursor, intelliVersion, intelliOn, suggestions.isEmpty()) {
+        if (suggestions.isEmpty() && tab.value.selection.collapsed) ide.intelli.signature(tab, cursor) else null
+    }
+    val infoNow = ide.intelli.info
+    val showInfo = infoNow != null && ide.intelli.infoPath == tab.file.path && ide.intelli.infoOffset == cursor && suggestions.isEmpty()
+    LaunchedEffect(cursor, text) {
+        if (ide.intelli.info != null && (ide.intelli.infoOffset != cursor || ide.intelli.infoPath != tab.file.path)) ide.intelli.hideInfo()
     }
     val lineCount = remember(text) { text.count { it == '\n' } + 1 }
     val problems = ide.problems.forTab(tab)
@@ -144,11 +180,12 @@ fun CodeEditor(tab: EditorTab, ide: IdeState, modifier: Modifier = Modifier) {
         }
     }
 
-    fun accept(word: String) {
+    fun accept(sug: Sug) {
         val v = tab.value
-        val (start, _) = Completion.wordBefore(v.text, v.selection.end)
-        val out = v.text.substring(0, start) + word + v.text.substring(v.selection.end)
-        tab.value = TextFieldValue(out, TextRange(start + word.length))
+        val end = v.selection.end.coerceIn(0, v.text.length)
+        val start = sug.start.coerceIn(0, end)
+        val out = v.text.substring(0, start) + sug.text + v.text.substring(end)
+        tab.value = TextFieldValue(out, TextRange(start + sug.text.length))
         selectedSuggestion = 0
     }
 
@@ -213,6 +250,8 @@ fun CodeEditor(tab: EditorTab, ide: IdeState, modifier: Modifier = Modifier) {
                         }
                         if (new.text != old.text) {
                             selectedSuggestion = 0
+                            ide.intelli.hideInfo()
+                            ide.intelli.onEdited(tab)
                             tab.diagnostics = Diagnostics.remap(old.text, tab.value.text, tab.diagnostics)
                             ide.problems.onEdited(tab)
                             ide.extensions.edited(tab)
@@ -279,32 +318,124 @@ fun CodeEditor(tab: EditorTab, ide: IdeState, modifier: Modifier = Modifier) {
                 if (suggestions.isNotEmpty() && l != null && cursor in 0..text.length) {
                     val rect = l.getCursorRect(cursor)
                     val topPad = with(density) { 4.dp.toPx() }
+                    val sel = suggestions[selectedSuggestion.coerceIn(0, suggestions.lastIndex)]
                     Column(
                         Modifier
                             .offset { IntOffset(rect.left.roundToInt(), (rect.bottom + topPad).roundToInt()) }
-                            .width(260.dp)
+                            .width(380.dp)
                             .border(1.dp, Vs.border)
                             .background(Vs.popupBg),
                     ) {
-                        suggestions.forEachIndexed { i, word ->
-                            val selected = i == selectedSuggestion.coerceIn(0, suggestions.lastIndex)
+                        suggestions.forEach { sug ->
+                            val selected = sug === sel
                             Row(
                                 Modifier
                                     .fillMaxWidth()
                                     .background(if (selected) Vs.selection else Vs.popupBg)
-                                    .clickable { accept(word) }
-                                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                                    .clickable { accept(sug) }
+                                    .padding(horizontal = 10.dp, vertical = 5.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
+                                if (sug.kind != null) {
+                                    Text(
+                                        sug.kind.tag,
+                                        color = Vs.textDim,
+                                        fontSize = 11.sp,
+                                        fontFamily = CodeFont,
+                                        modifier = Modifier.width(14.dp),
+                                    )
+                                }
                                 Text(
-                                    word,
+                                    sug.text,
                                     color = if (selected) Vs.textBright else Vs.text,
                                     fontFamily = CodeFont,
                                     fontSize = 14.sp,
                                     fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+                                    maxLines = 1,
                                 )
+                                if (sug.detail.isNotEmpty()) {
+                                    Text(
+                                        sug.detail,
+                                        color = Vs.textDim,
+                                        fontFamily = CodeFont,
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
                             }
+                        }
+                        if (sel.doc.isNotEmpty()) {
+                            Text(
+                                sel.doc,
+                                color = Vs.textDim,
+                                fontSize = 12.sp,
+                                maxLines = 3,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(1.dp, Vs.border)
+                                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                            )
+                        }
+                    }
+                }
+
+                // Parameter hint above the caret while typing a call.
+                if (signature != null && l != null && cursor in 0..text.length) {
+                    val rect = l.getCursorRect(cursor)
+                    val gap = with(density) { 6.dp.roundToPx() }
+                    val x = rect.left.roundToInt()
+                    val y = rect.top.roundToInt()
+                    val label = remember(signature) {
+                        buildAnnotatedString {
+                            append(signature.label)
+                            signature.ranges.getOrNull(signature.active)?.let { r ->
+                                addStyle(SpanStyle(color = Vs.textBright, fontWeight = FontWeight.Bold), r.first, r.last + 1)
+                            }
+                        }
+                    }
+                    Column(
+                        Modifier
+                            .layout { m, c ->
+                                val p = m.measure(c)
+                                layout(p.width, p.height) { p.place(x, (y - p.height - gap).coerceAtLeast(0)) }
+                            }
+                            .widthIn(max = 520.dp)
+                            .border(1.dp, Vs.border)
+                            .background(Vs.popupBg)
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                    ) {
+                        Text(label, color = Vs.text, fontFamily = CodeFont, fontSize = 13.sp)
+                        if (signature.doc.isNotEmpty()) {
+                            Text(signature.doc, color = Vs.textDim, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+
+                // Quick info card (Ctrl+I), closed with Esc or by moving the caret.
+                if (showInfo && infoNow != null && l != null && cursor in 0..text.length) {
+                    val rect = l.getCursorRect(cursor)
+                    val topPad = with(density) { 4.dp.toPx() }
+                    Column(
+                        Modifier
+                            .offset { IntOffset(rect.left.roundToInt(), (rect.bottom + topPad).roundToInt()) }
+                            .widthIn(max = 520.dp)
+                            .border(1.dp, Vs.border)
+                            .background(Vs.popupBg)
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(infoNow.signature, color = Vs.textBright, fontFamily = CodeFont, fontSize = 13.sp)
+                        Text(infoNow.kindLabel, color = Vs.textDim, fontSize = 12.sp)
+                        if (infoNow.doc.isNotEmpty()) Text(infoNow.doc, color = Vs.text, fontSize = 13.sp)
+                        if (infoNow.where.isNotEmpty()) {
+                            Text(
+                                infoNow.where + if (infoNow.canJump) "   (F12 to open)" else "",
+                                color = Vs.textDim, fontSize = 12.sp,
+                            )
                         }
                     }
                 }
