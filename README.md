@@ -1,8 +1,12 @@
 # VSDroid
 
-**A real code editor for your tablet.**
+**Hey Guys**
+Bluu here, just wanted to say thanks for checking out the project, just a disclaimer, this project was built by Claude, I take no credit for this project which is why you can redistribute it, fork it, and loads of other stuff that my tiny brain doesn't understand, as long as you don't profit from it. I know a lot of people get angry at people who vibe-code, but it's pretty useful, especially if you're still new to programming and need a piece of Software that doesn't exist or you can't afford. In my case, my laptop broke, and so far I've had no luck with customer support to get it fixed, I needed somewhere to write my code so I could keep practicing, and that's why I asked Claude to make VSDroid.
 
-You've got a big, beautiful screen, a keyboard that clips on, and a pile of ideas. What you haven't had is somewhere to write code that doesn't feel like a compromise. VSDroid is built natively for Android (Kotlin and Jetpack Compose, no Electron, no WebView), so it opens instantly and it feels at home on a touch screen.
+I know I know, Acode exists, but even with extensions it lacks so many useful features and workflow improvements, VSDroid is built to work out of the box.
+
+The rest of this README is writted by Claude, enjoy :]
+
 
 ## It feels like the editor you already know
 
