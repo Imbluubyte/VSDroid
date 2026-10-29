@@ -1,0 +1,72 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # The runner already has the Android SDK; just accept licences and make sure the needed parts exist.
+      - name: Prepare Android SDK
+        run: |
+          SDKMANAGER=$(ls "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | head -n 1)
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" > /dev/null
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+
+      # Rebuilds the fixed signing key from a repository secret. Forks and fork pull requests have no
+      # secrets, so they skip this and the build falls back to the debug key.
+      - name: Prepare signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.VSDROID_KEYSTORE_BASE64 }}
+          VSDROID_KEYSTORE_PASSWORD: ${{ secrets.VSDROID_KEYSTORE_PASSWORD }}
+          VSDROID_KEY_ALIAS: ${{ secrets.VSDROID_KEY_ALIAS }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "No signing key available: signing with the debug key (updates won't install over other builds)."
+            exit 0
+          fi
+          KS="$RUNNER_TEMP/vsdroid-release.jks"
+          # Tolerate spaces, line breaks and carriage returns from copy and paste.
+          if ! printf '%s' "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 -d > "$KS" 2>/dev/null; then
+            echo "::error::VSDROID_KEYSTORE_BASE64 is not valid base64 (it has ${#KEYSTORE_BASE64} characters). Re-create it with: base64 -w0 vsdroid-release.jks, and paste only that output (no shell prompt, no extra text)."
+            exit 1
+          fi
+          if ! keytool -list -keystore "$KS" -alias "$VSDROID_KEY_ALIAS" -storepass:env VSDROID_KEYSTORE_PASSWORD > /dev/null 2>&1; then
+            echo "::error::The keystore decoded, but opening it failed. Check that VSDROID_KEYSTORE_PASSWORD and VSDROID_KEY_ALIAS match the keystore, and that VSDROID_KEYSTORE_BASE64 is the complete file."
+            exit 1
+          fi
+          echo "VSDROID_KEYSTORE_FILE=$KS" >> "$GITHUB_ENV"
+          echo "Signing with the VSDroid key."
+
+      - name: Build debug APK
+        env:
+          VSDROID_KEYSTORE_PASSWORD: ${{ secrets.VSDROID_KEYSTORE_PASSWORD }}
+          VSDROID_KEY_ALIAS: ${{ secrets.VSDROID_KEY_ALIAS }}
+          VSDROID_KEY_PASSWORD: ${{ secrets.VSDROID_KEY_PASSWORD }}
+        run: gradle assembleDebug --stacktrace
+
+      # Same fingerprint on every build = APKs can be installed over each other.
+      - name: Show signing certificate
+        run: |
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n 1)
+          "$APKSIGNER" verify --print-certs app/build/outputs/apk/debug/app-debug.apk | grep -E "Signer #1 certificate (DN|SHA-256)" || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VSDroid-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
