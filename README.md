@@ -36,4 +36,4 @@ A first-launch guide that sets up your tools, a to-do list for every project, fu
 
 ---
 
-VSDroid is an open-source project. Ideas, bug reports and pull requests are welcome.
+VSDroid is open source under the [GNU GPLv3](LICENSE). Ideas, bug reports and pull requests are welcome.
