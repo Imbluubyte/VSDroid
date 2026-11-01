@@ -8,7 +8,7 @@ package com.vsdroid.ide.core
 
 private val DECL_WORDS = setOf(
     "def", "class", "fun", "function", "val", "var", "let", "const", "struct", "enum", "interface", "namespace", "package",
-    "record", "object", "type", "typealias", "trait", "import", "using", "module",
+    "record", "object", "type", "typealias", "trait", "import", "using", "module", "fn", "use",
 )
 
 /** Index of the last token that ends at or before [offset], or -1. */
@@ -68,6 +68,7 @@ fun IntelliDoc.complete(cursor: Int, force: Boolean = false, extra: List<String>
     val (start, prefix) = Completion.wordBefore(text, cursor)
     if (prefix.isNotEmpty() && prefix[0].isDigit()) return null
     if (fam == "py") pyImportCompletion(start, prefix, max)?.let { return it }
+    if (fam == "sn") snUseCompletion(start, prefix, max)?.let { return it }
     val opLen = memberOpBefore(start)
     if (opLen > 0) return memberCompletion(start, prefix, opLen, cursor, max)
     if (prefix.length < 2 && !force) return null
@@ -152,6 +153,28 @@ private fun IntelliDoc.pyImportCompletion(start: Int, prefix: String, max: Int):
     return CompletionResult(start, sortItems(distinct, prefix, max))
 }
 
+/** `use ` completes module names: the standard library (`std.math`, ...) and the project's `.sn` files. */
+private fun IntelliDoc.snUseCompletion(start: Int, prefix: String, max: Int): CompletionResult? {
+    val f = fam ?: return null
+    val ls = text.lastIndexOf('\n', start - 1) + 1
+    val head = text.substring(ls, start)
+    val m = Regex("^\\s*use\\s+((?:\\w+\\.)*)$").find(head) ?: return null
+    val pkg = m.groupValues[1]
+    val names = LinkedHashSet<String>()
+    names.addAll(IntelliData.typeNames(f).filter { it.startsWith("std.") })
+    names.addAll(index?.moduleNames(f, path) ?: emptyList())
+    val items = ArrayList<Pair<CompletionItem, Int>>()
+    for (nm in names) {
+        if (!nm.startsWith(pkg) || nm == pkg) continue
+        val rest = nm.removePrefix(pkg)
+        if (!rest.startsWith(prefix, ignoreCase = true)) continue
+        items.add(CompletionItem(rest.substringBefore('.'), SymKind.MODULE, nm) to 0)
+    }
+    val distinct = items.distinctBy { it.first.label }
+    if (distinct.isEmpty()) return null
+    return CompletionResult(start, sortItems(distinct, prefix, max))
+}
+
 private fun IntelliDoc.nameCompletion(start: Int, prefix: String, cursor: Int, force: Boolean, extra: List<String>, max: Int): CompletionResult? {
     val k = lastTokEnding(start)
     if (!force && k >= 0 && toks[k].kind == TK.IDENT && toks[k].text in DECL_WORDS) return null
@@ -171,7 +194,7 @@ private fun IntelliDoc.nameCompletion(start: Int, prefix: String, cursor: Int, f
         }
     }
     // Members of the current class (Java, C#, Kotlin, C++ see them without `this.`).
-    if (fam == "java" || fam == "cs" || fam == "kt" || fam == "cpp") {
+    if (fam == "java" || fam == "cs" || fam == "kt" || fam == "cpp" || fam == "sn") {
         thisType(cursor)?.let { t -> for (m in membersOf(t)) if (m.symbol != null) put(CompletionItem(m.name, m.kind, detailOf(m), m.doc), 3) }
     }
     for (s in symbols) {
@@ -205,7 +228,7 @@ private fun IntelliDoc.nameCompletion(start: Int, prefix: String, cursor: Int, f
 
 private class Cand(val label: String, val params: List<String>, val doc: String)
 
-private val NOT_A_CALL = setOf("if", "while", "for", "switch", "catch", "return", "elif", "with", "foreach", "using", "lock", "sizeof", "typeof")
+private val NOT_A_CALL = setOf("if", "while", "for", "switch", "catch", "return", "elif", "with", "foreach", "using", "lock", "sizeof", "typeof", "orif", "match", "case")
 
 /** Parameter hints for the call the caret is inside, or null. */
 fun IntelliDoc.signatureAt(cursor: Int): SignatureInfo? {
@@ -238,7 +261,7 @@ fun IntelliDoc.signatureAt(cursor: Int): SignatureInfo? {
     if (open < 1 || !v.isId(open - 1)) return null
     val callee = toks[open - 1]
     if (callee.text in NOT_A_CALL) return null
-    if (open >= 2 && v.isId(open - 2) && toks[open - 2].text in setOf("def", "class", "fun", "function", "func", "void")) return null
+    if (open >= 2 && v.isId(open - 2) && toks[open - 2].text in setOf("def", "class", "fun", "function", "func", "void", "fn")) return null
     val cand = candidateFor(v, open - 1, cursor, commas) ?: return null
     val params = cand.params
     val active = if (params.isEmpty()) -1 else minOf(commas, params.lastIndex)
@@ -304,6 +327,7 @@ private fun IntelliDoc.constructorOf(cls: Symbol, commas: Int): Cand? {
     val ctorName = when (fam) {
         "py" -> "__init__"
         "js" -> "constructor"
+        "sn" -> "onCreation"
         else -> cls.name
     }
     val pool = symbols.filter { it.container == cls.name && it.name == ctorName && it.isCallable() } +

@@ -177,6 +177,12 @@ class SymbolIndex {
                 val rest = module.replace('.', '/')
                 return first("$dir/$rest.lua", "$dir/$rest/init.lua") ?: files.firstOrNull { it.endsWith("/$rest.lua") || it.endsWith("/$rest/init.lua") }
             }
+            "sn" -> {
+                // `use a.b` loads a/b.sn; `std.*` is built into the compiler.
+                if (module.startsWith("std.")) return null
+                val rest = module.replace('.', '/')
+                return first("$dir/$rest.sn") ?: files.firstOrNull { it.endsWith("/$rest.sn") }
+            }
         }
         return null
     }
@@ -189,6 +195,10 @@ class SymbolIndex {
             when (fam) {
                 "py" -> if (f.endsWith(".py")) {
                     val rel = f.removePrefix("$root/").removeSuffix(".py").removeSuffix("/__init__")
+                    if (!rel.startsWith("/") && rel.isNotEmpty()) out.add(rel.replace('/', '.'))
+                }
+                "sn" -> if (f.endsWith(".sn")) {
+                    val rel = f.removePrefix("$root/").removeSuffix(".sn")
                     if (!rel.startsWith("/") && rel.isNotEmpty()) out.add(rel.replace('/', '.'))
                 }
                 "lua" -> if (f.endsWith(".lua")) {

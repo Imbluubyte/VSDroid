@@ -12,6 +12,42 @@ object EditorOps {
 
     private val PY_PREFIXES = setOf("f", "r", "b", "u", "fr", "rf", "br", "rb")
     private val CPP_PREFIXES = setOf("l", "u", "u8", "r", "lr", "ur", "u8r")
+    private val SN_PREFIXES = setOf("f")
+
+    /**
+     * One level of indentation for the file. SuperNova refuses files that mix tabs and spaces, so it follows the
+     * first indented line (a tab for a file with no indentation yet, as its own docs recommend); other
+     * languages always use [INDENT].
+     */
+    fun indentUnit(text: String, lang: Language?): String {
+        if (lang?.id != "supernova") return INDENT
+        for (line in text.lineSequence()) {
+            if (line.isBlank()) continue
+            if (line[0] == '\t') return "\t"
+            if (line[0] == ' ') return INDENT
+        }
+        return "\t"
+    }
+
+    /** True when [line], ignoring a trailing `#` comment outside strings, ends with a colon (SuperNova blocks). */
+    private fun snEndsWithColon(line: String): Boolean {
+        var inStr = false
+        var end = line.length
+        var i = 0
+        while (i < line.length) {
+            val ch = line[i]
+            if (inStr) {
+                if (ch == '\\') i++ else if (ch == '"') inStr = false
+            } else if (ch == '"') {
+                inStr = true
+            } else if (ch == '#') {
+                end = i
+                break
+            }
+            i++
+        }
+        return line.substring(0, end).trimEnd().endsWith(":")
+    }
 
     /**
      * True when the identifier characters directly before the quote at [quoteIndex] are a string prefix of [lang]
@@ -21,6 +57,7 @@ object EditorOps {
         val prefixes = when (lang.id) {
             "python" -> PY_PREFIXES
             "cpp" -> CPP_PREFIXES
+            "supernova" -> SN_PREFIXES
             else -> return false
         }
         var i = quoteIndex
@@ -73,6 +110,8 @@ object EditorOps {
 
         if (typed == '\n') return autoIndent(n, pos, lang)
 
+        if (typed == '\'' && lang.id == "supernova") return new
+
         // Typing a closer right before the same closer: just move past it.
         if (autoClose && typed in CLOSERS && next == typed) {
             return TextFieldValue(o, TextRange(pos))
@@ -103,18 +142,20 @@ object EditorOps {
         val trimmed = prevLine.trimEnd()
         val last = trimmed.lastOrNull()
         val opens = last == '{' || last == '(' || last == '[' || (last == ':' && lang.id == "python") ||
+            (lang.id == "supernova" && snEndsWithColon(prevLine)) ||
             (lang.id == "lua" && (trimmed.endsWith("then") || trimmed.endsWith("do") || trimmed.endsWith("function()")))
         val nextChar = text.getOrNull(pos)
+        val unit = indentUnit(text, lang)
 
         // Caret between a pair such as {|} : put the closer on its own line.
         if (opens && (last == '{' || last == '(' || last == '[') && nextChar != null &&
             nextChar == PAIRS[last]
         ) {
-            val inner = indent + INDENT
+            val inner = indent + unit
             val out = text.substring(0, pos) + inner + "\n" + indent + text.substring(pos)
             return TextFieldValue(out, TextRange(pos + inner.length))
         }
-        val add = if (opens) INDENT else ""
+        val add = if (opens) unit else ""
         val insert = indent + add
         if (insert.isEmpty()) return TextFieldValue(text, TextRange(pos))
         val out = text.substring(0, pos) + insert + text.substring(pos)
@@ -122,20 +163,21 @@ object EditorOps {
     }
 
     /** Insert indentation at the caret (Tab key). With a multi-line selection every line is indented. */
-    fun indent(v: TextFieldValue): TextFieldValue {
+    fun indent(v: TextFieldValue, lang: Language? = null): TextFieldValue {
         val text = v.text
+        val unit = indentUnit(text, lang)
         val sel = v.selection
         val a = minOf(sel.start, sel.end)
         val b = maxOf(sel.start, sel.end)
         if (sel.collapsed || !text.substring(a, b).contains('\n')) {
-            val out = text.substring(0, a) + INDENT + text.substring(b)
-            return TextFieldValue(out, TextRange(a + INDENT.length))
+            val out = text.substring(0, a) + unit + text.substring(b)
+            return TextFieldValue(out, TextRange(a + unit.length))
         }
         val start = lineStart(text, a)
         val block = text.substring(start, b)
-        val changed = block.lines().joinToString("\n") { INDENT + it }
+        val changed = block.lines().joinToString("\n") { unit + it }
         val out = text.substring(0, start) + changed + text.substring(b)
-        return TextFieldValue(out, TextRange(a + INDENT.length, b + (changed.length - block.length)))
+        return TextFieldValue(out, TextRange(a + unit.length, b + (changed.length - block.length)))
     }
 
     /** Shift+Tab: remove up to one indent level from the selected lines. */

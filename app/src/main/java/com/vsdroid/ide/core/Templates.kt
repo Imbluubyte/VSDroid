@@ -112,6 +112,13 @@ object Templates {
                 "README.md" to "# $name\n\nA Lua project.\n\n## Run\n\n```\nlua main.lua\n```\n",
             )
         },
+        Template("supernova", "SuperNova", "main.sn, README, .gitignore (compile with snc)") { name ->
+            mapOf(
+                "main.sn" to "# $name\n\nfn main():\n\tprint(\"Hello from $name!\")\n\nmain()\n",
+                "README.md" to "# $name\n\nA SuperNova project.\n\n## Run\n\n```\nsnc run main.sn\n```\n",
+                ".gitignore" to "*.out\n",
+            )
+        },
         Template("empty", "Empty Folder", "Just a folder") { _ -> emptyMap() },
     )
 

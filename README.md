@@ -18,7 +18,7 @@ The layout is the one you've spent years in: activity bar, side bar, tabs, a com
 
 Type `.` and VSDroid knows what you're talking about, whether it's a string, a class from another file or something from the standard library. Parameter hints follow you through a call. Press F12 and you're at the definition, even across files. Rename a function and every use of it changes with it, without touching the strings and comments that happen to share the name.
 
-That works the same way in **Python, JavaScript, TypeScript, Java, C#, Kotlin, C++ and Lua**, not only in one favourite language.
+That works the same way in **Python, JavaScript, TypeScript, Java, C#, Kotlin, C++, Lua and SuperNova**, not only in one favourite language.
 
 ## It tells you what's wrong before you run it
 
@@ -26,7 +26,7 @@ Syntax errors, undefined names and unused imports get underlined as you type, wi
 
 ## It runs your code
 
-A real terminal is built in. With Termux behind it you get the full Linux toolbox: Python with virtual environments and pip, .NET, Node, Java, C++, Lua. Programs can ask for input and you answer right in the terminal. Open as many terminals as you like and run things side by side.
+A real terminal is built in. With Termux behind it you get the full Linux toolbox: Python with virtual environments and pip, .NET, Node, Java, C++, Lua, SuperNova. Programs can ask for input and you answer right in the terminal. Open as many terminals as you like and run things side by side.
 
 ## Your projects, your Git
 

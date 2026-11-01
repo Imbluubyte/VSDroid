@@ -90,7 +90,7 @@ class ProjectIndex {
 }
 
 object Diagnostics {
-    private val SUPPORTED = setOf("python", "csharp", "java", "kotlin", "javascript", "typescript", "cpp", "lua", "json")
+    private val SUPPORTED = setOf("python", "csharp", "java", "kotlin", "javascript", "typescript", "cpp", "lua", "supernova", "json")
 
     /** Files bigger than this are not checked (minified or generated code). */
     const val MAX_CHARS = 400_000
@@ -132,6 +132,7 @@ object Diagnostics {
             when (lang.id) {
                 "python" -> PyCheck(ctx).run()
                 "lua" -> LuaCheck(ctx).run()
+                "supernova" -> SnCheck(ctx).run()
                 else -> BraceCheck(ctx).run()
             }
         }

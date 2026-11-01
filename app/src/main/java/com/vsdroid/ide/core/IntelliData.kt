@@ -37,7 +37,7 @@ class BuiltinEntry(val name: String, val sig: String, val returns: String?, val 
 }
 
 object IntelliData {
-    /** "py", "js", "cs", "java", "kt", "cpp" or "lua"; null for languages without tables. */
+    /** "py", "js", "cs", "java", "kt", "cpp", "lua" or "sn"; null for languages without tables. */
     fun family(lang: Language): String? = when (lang.id) {
         "python" -> "py"
         "javascript", "typescript" -> "js"
@@ -46,6 +46,7 @@ object IntelliData {
         "kotlin" -> "kt"
         "cpp" -> "cpp"
         "lua" -> "lua"
+        "supernova" -> "sn"
         else -> null
     }
 
@@ -115,6 +116,7 @@ object IntelliData {
         "kt" to mapOf("string" to "String", "int" to "Int", "float" to "Double", "bool" to "Boolean"),
         "cpp" to mapOf("string" to "string", "int" to "int", "float" to "double", "bool" to "bool"),
         "lua" to mapOf("string" to "string"),
+        "sn" to mapOf("string" to "String", "list" to "List", "dict" to "Dict", "int" to "Int", "float" to "Float", "bool" to "Bool"),
     )
 
     private val ALIASES = mapOf(
@@ -126,7 +128,7 @@ object IntelliData {
         "cpp" to mapOf("wstring" to "string", "std::string" to "string", "std::vector" to "vector", "std::map" to "map"),
     )
 
-    private val RAW: Map<String, String> = mapOf("py" to PY, "js" to JS, "cs" to CS, "java" to JAVA, "kt" to KT, "cpp" to CPP, "lua" to LUA)
+    private val RAW: Map<String, String> = mapOf("py" to PY, "js" to JS, "cs" to CS, "java" to JAVA, "kt" to KT, "cpp" to CPP, "lua" to LUA, "sn" to SN)
 }
 
 private const val PY = """
@@ -804,4 +806,120 @@ read(format) | Read from the file.
 write(...) -> file | Write to the file.
 lines() | Iterate over lines.
 close() -> boolean | Close the file.
+"""
+
+private const val SN = """
+@globals
+print(*values) -> Void | Print the values separated by spaces, then a newline.
+str(x) -> String | Convert a value to a String.
+int(x) -> Int | Convert to an Int. Strings are parsed, Floats are truncated.
+float(x) -> Float | Convert to a Float. Strings are parsed.
+gcCollect() -> Void | Run the garbage collector now.
+gcHeapBytes() -> Int | Bytes of memory currently allocated.
+sleep(seconds) | Wait without blocking other tasks. Use with await.
+readFile(path) -> String | Read a whole file in the background. Use with await.
+writeFile(path, text) | Write a file in the background. Use with await.
+@String
+length() -> Int | Number of bytes.
+upper() -> String | Upper-case copy (ASCII letters).
+lower() -> String | Lower-case copy (ASCII letters).
+trim() -> String | Copy without spaces at both ends.
+slice(from, to) -> String | Part of the string, both ends included, counting from 1.
+contains(text) -> Bool | Is text inside the string?
+startsWith(text) -> Bool | Does the string start with text?
+endsWith(text) -> Bool | Does the string end with text?
+find(text, start) -> Int | Position of text counting from 1, or 0 when it is not found.
+replace(old, new) -> String | Copy with every old replaced by new.
+repeat(n) -> String | The string repeated n times.
+split(separator) -> List | The pieces between separators, as a list of Strings.
+chars() -> List | The characters as a list of one-character Strings.
+@List
+length() -> Int | Number of items.
+add(x) -> Void | Add an item at the end.
+remove(x) -> Bool | Remove the first match. True if something was removed.
+contains(x) -> Bool | Is x in the list?
+merge(other) -> Void | Add every item of another list.
+copy() -> List | An independent copy (lists are shared by default).
+clear() -> Void | Remove every item.
+reverse() -> Void | Reverse the order in place.
+sort() -> Void | Sort numbers or strings in place.
+sum() | Add up a list of numbers.
+min() | Smallest number.
+max() | Largest number.
+mean() -> Float | Average of a list of numbers.
+filter(predicate) -> List | A new list: by type (str, int), comparison (< 4) or a function.
+map(f) -> List | A new list with f applied to every item.
+each(f) -> Void | Call f for every item.
+reduce(start, f) | Combine all items into one value with f.
+any(f) -> Bool | True if f is true for some item.
+all(f) -> Bool | True if f is true for every item.
+join(separator) -> String | Join the items into one String.
+@Dict
+length() -> Int | Number of entries.
+keys() -> List | The keys, in insertion order.
+values() -> List | The values, in insertion order.
+contains(key) -> Bool | Is the key in the dictionary?
+get(key, default) | The value for key; with one argument the result is optional.
+remove(key) -> Void | Remove a key. Nothing happens if it is missing.
+merge(other) -> Void | Add every entry of another dictionary.
+clear() -> Void | Remove every entry.
+@std.math
+PI | The constant pi.
+E | Euler's number.
+TAU | Two times pi.
+sqrt(x) -> Float | Square root.
+pow(x, y) -> Float | x to the power y.
+exp(x) -> Float | e to the power x.
+log(x) -> Float | Natural logarithm.
+log2(x) -> Float | Base 2 logarithm.
+log10(x) -> Float | Base 10 logarithm.
+sin(x) -> Float | Sine.
+cos(x) -> Float | Cosine.
+tan(x) -> Float | Tangent.
+asin(x) -> Float | Arc sine.
+acos(x) -> Float | Arc cosine.
+atan(x) -> Float | Arc tangent.
+atan2(y, x) -> Float | Arc tangent of y / x.
+hypot(a, b) -> Float | Length of the hypotenuse.
+toRadians(degrees) -> Float | Degrees to radians.
+toDegrees(radians) -> Float | Radians to degrees.
+floor(x) -> Int | Round down.
+ceil(x) -> Int | Round up.
+round(x) -> Int | Round to the nearest Int.
+trunc(x) -> Int | Drop the fraction.
+isNaN(x) -> Bool | Is x not a number?
+abs(x) | Absolute value of an Int or Float.
+min(a, b) | Smaller of two numbers of the same type.
+max(a, b) | Larger of two numbers of the same type.
+clamp(x, low, high) | x limited to the range low..high.
+sign(x) -> Int | -1, 0 or 1.
+gcd(a, b) -> Int | Greatest common divisor.
+lerp(a, b, t) -> Float | Blend from a to b by t.
+@std.random
+seed(n) -> Void | Make the sequence repeatable.
+random() -> Float | A Float from 0 up to (not including) 1.
+randInt(low, high) -> Int | An Int from low to high, both included.
+randFloat(low, high) -> Float | A Float from low up to high.
+chance(p) -> Bool | True with probability p.
+choice(xs) | A random item of a list.
+shuffle(xs) -> Void | Shuffle a list in place.
+@std.time
+now() -> Float | Seconds since 1970 (wall clock).
+monotonic() -> Float | Seconds from an arbitrary start that never goes backwards.
+since(start) -> Float | Seconds since a monotonic() value.
+measure(f) -> Float | Run f once and return how many seconds it took.
+@std.sys
+args() -> List | The command-line arguments after the program name.
+exit(code) -> Void | Stop the program.
+getEnv(name) -> String | Read an environment variable.
+hasEnv(name) -> Bool | Is the environment variable set?
+write(text) -> Void | Print text without a newline.
+readLine() -> String | Read one line of input. Fails at the end of input.
+input(prompt) -> String | Print the prompt, then read one line.
+@std.fs
+readText(path) -> String | Read a whole file.
+writeText(path, text) -> Void | Write a file.
+appendText(path, text) -> Void | Add text to the end of a file.
+exists(path) -> Bool | Does the file exist?
+readLines(path) -> List | The lines of a file without line endings.
 """

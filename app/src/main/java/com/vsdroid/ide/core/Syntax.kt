@@ -22,7 +22,7 @@ object Syntax {
     private val CONTROL = setOf(
         "if", "else", "elif", "for", "while", "do", "switch", "case", "break", "continue", "return",
         "try", "catch", "except", "finally", "throw", "raise", "yield", "await", "async", "import",
-        "from", "export", "using", "goto", "default", "with", "match", "when",
+        "from", "export", "using", "goto", "default", "with", "match", "when", "orif", "use", "repeat",
     )
 
     fun highlight(text: String, lang: Language): AnnotatedString = when (lang.id) {
@@ -87,7 +87,13 @@ object Syntax {
                     i = e
                     continue
                 }
-                if (c == '"' || c == '\'' || (c == '`' && lang.backtickStrings)) {
+                if (lang.fStrings && c == 'f' && i + 1 < n && text[i + 1] == '"' && (i == 0 || !isIdentChar(text[i - 1]))) {
+                    val end = scanString(text, i + 1, lang)
+                    paint(i, end, SyntaxColors.string)
+                    i = end
+                    continue
+                }
+                if (c == '"' || (c == '\'' && lang.id != "supernova") || (c == '`' && lang.backtickStrings)) {
                     val end = scanString(text, i, lang)
                     var color = SyntaxColors.string
                     if (lang.id == "json") {
