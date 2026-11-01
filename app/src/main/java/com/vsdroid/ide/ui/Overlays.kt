@@ -580,7 +580,7 @@ private fun NewProjectDialog(ide: IdeState) {
             try {
                 val dir = Templates.create(ide.workspace, name, template)
                 ide.openFolder(dir)
-                val first = listOf("main.py", "main.lua", "Program.cs", "index.html", "index.js", "main.cpp", "README.md")
+                val first = listOf("main.py", "main.lua", "main.sn", "Program.cs", "index.html", "index.js", "main.cpp", "README.md")
                     .map { File(dir, it) }.firstOrNull { it.isFile }
                 if (first != null) ide.openFile(first)
                 if (template.wantsVenv && makeVenv && ide.termuxInstalled) ide.createVenv(".venv")

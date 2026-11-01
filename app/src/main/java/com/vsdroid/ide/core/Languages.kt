@@ -17,6 +17,8 @@ class Language(
     val tripleQuotes: Boolean = false,
     val backtickStrings: Boolean = false,
     val typeColoring: Boolean = true,
+    /** `f"..."` strings: the `f` is painted with the string (SuperNova). */
+    val fStrings: Boolean = false,
     /** Command used by "Run File". {file} is replaced with the quoted absolute path. */
     val runTemplate: String? = null,
 ) {
@@ -113,6 +115,14 @@ object Languages {
         "echo cd ls cat grep sed awk find cp mv rm mkdir chmod chown pwd read printf test pip python " +
             "python3 git curl wget"
 
+    private const val SN_KW =
+        "var const fn return if orif else while for in has match case default and or not true false null " +
+            "class extends try catch finally throw async await use as private manages break continue pass " +
+            "repeat self super"
+    private const val SN_TYPES = "Int Float Bool String List Dict Tuple Task Fn Any"
+    private const val SN_BUILTINS =
+        "print str int float bool gcCollect gcHeapBytes sleep readFile writeFile onCreation toString"
+
     val plain = Language("plaintext", "Plain Text")
 
     val all: List<Language> = listOf(
@@ -162,6 +172,11 @@ object Languages {
             lineComment = "#", typeColoring = false,
             runTemplate = "bash {file}",
         ),
+        Language(
+            "supernova", "SuperNova", SN_KW, SN_TYPES, SN_BUILTINS,
+            lineComment = "#", fStrings = true,
+            runTemplate = "mkdir -p \"\$HOME/.vsdroid/bin\" && snc build {file} -o \"\$HOME/.vsdroid/bin/sn_app\" && \"\$HOME/.vsdroid/bin/sn_app\"",
+        ),
         Language("json", "JSON", "true false null", typeColoring = false),
         Language("yaml", "YAML", "true false null yes no on off", lineComment = "#", typeColoring = false),
         Language("toml", "TOML", "true false", lineComment = "#", typeColoring = false),
@@ -181,6 +196,7 @@ object Languages {
         "ts" to "typescript", "tsx" to "typescript",
         "c" to "cpp", "h" to "cpp", "cpp" to "cpp", "cc" to "cpp", "hpp" to "cpp", "cxx" to "cpp",
         "lua" to "lua",
+        "sn" to "supernova",
         "sh" to "shell", "bash" to "shell", "zsh" to "shell",
         "json" to "json", "jsonc" to "json",
         "yml" to "yaml", "yaml" to "yaml",

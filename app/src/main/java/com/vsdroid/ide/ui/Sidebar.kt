@@ -152,6 +152,7 @@ fun fileColor(file: File): Color = when (file.extension.lowercase()) {
     "css", "scss" -> Color(0xFF519ABA)
     "md" -> Color(0xFF6A9955)
     "lua" -> Color(0xFF51A0CF)
+    "sn" -> Color(0xFFB07CFF)
     "sh", "bash" -> Color(0xFF89E051)
     "c", "cpp", "h", "hpp", "cc" -> Color(0xFF599EFF)
     else -> Color(0xFF9DA5B4)

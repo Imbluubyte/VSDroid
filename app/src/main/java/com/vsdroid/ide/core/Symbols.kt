@@ -87,13 +87,14 @@ object Symbols {
         }
     }
 
-    private val SUPPORTED = setOf("python", "csharp", "java", "kotlin", "javascript", "typescript", "cpp", "lua")
+    private val SUPPORTED = setOf("python", "csharp", "java", "kotlin", "javascript", "typescript", "cpp", "lua", "supernova")
 
     fun supports(lang: Language) = lang.id in SUPPORTED
 
     internal fun newScanner(text: String, lang: Language): ScanBase? = when (lang.id) {
         "python" -> PyScanner(text, lang)
         "lua" -> LuaScanner(text, lang)
+        "supernova" -> SnScanner(text, lang)
         "csharp", "java", "kotlin", "javascript", "typescript", "cpp" -> BraceScanner(text, lang)
         else -> null
     }

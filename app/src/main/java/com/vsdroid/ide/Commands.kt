@@ -87,7 +87,7 @@ class Commands(private val ide: IdeState) {
     val moveDown = Command("edit.moveDown", "Edit: Move Line Down", "Alt+Down") {
         edit { it.value = EditorOps.moveLines(it.value, false) }
     }
-    val indent = Command("edit.indent", "Edit: Indent Line", "Ctrl+]") { edit { it.value = EditorOps.indent(it.value) } }
+    val indent = Command("edit.indent", "Edit: Indent Line", "Ctrl+]") { edit { it.value = EditorOps.indent(it.value, it.language) } }
     val outdent = Command("edit.outdent", "Edit: Outdent Line", "Ctrl+[") { edit { it.value = EditorOps.outdent(it.value) } }
 
     val runFile = Command("run.file", "Run: Run Current File", "F5") { ide.runCurrentFile() }

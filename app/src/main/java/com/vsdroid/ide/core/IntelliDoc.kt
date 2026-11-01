@@ -24,7 +24,7 @@ class IntelliDoc(val text: String, val lang: Language, val path: String, val ind
     internal val toks: List<Tok> = sc?.toks ?: emptyList()
 
     /** True for languages where members are visible without `this.` inside a class. */
-    private val implicitThis = fam == "java" || fam == "cs" || fam == "kt" || fam == "cpp"
+    private val implicitThis = fam == "java" || fam == "cs" || fam == "kt" || fam == "cpp" || fam == "sn"
 
     // ---- positions -------------------------------------------------------------------------------------
 
@@ -116,7 +116,7 @@ class IntelliDoc(val text: String, val lang: Language, val path: String, val ind
 
     // ---- types ---------------------------------------------------------------------------------------------
 
-    private val NO_TYPE = setOf("None", "void", "Unit", "nil", "undefined", "Nothing", "any", "Any", "object", "Object?", "never", "unknown")
+    private val NO_TYPE = setOf("None", "void", "Unit", "nil", "undefined", "Nothing", "any", "Any", "object", "Object?", "never", "unknown", "Fn", "Void")
 
     internal fun typeFromText(t: String?): TypeRef? {
         if (t == null) return null
@@ -207,7 +207,7 @@ class IntelliDoc(val text: String, val lang: Language, val path: String, val ind
                     else if (p >= 0 && ((v.isId(p) && !v.isKeyword(v.toks[p].text)) || v.isOp(p, ")") || v.isOp(p, "]"))) null
                     else lit("list")
                 }
-                "}" -> if (fam == "py" || fam == "js") lit("dict") else null
+                "}" -> if (fam == "py" || fam == "js" || fam == "sn") lit("dict") else null
                 else -> null
             }
             TK.IDENT -> typeOfName(v, k, offset, depth)

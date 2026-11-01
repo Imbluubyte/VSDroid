@@ -290,7 +290,7 @@ fun CodeEditor(tab: EditorTab, ide: IdeState, modifier: Modifier = Modifier) {
                                     } else if (e.isShiftPressed) {
                                         tab.value = EditorOps.outdent(tab.value)
                                     } else {
-                                        tab.value = EditorOps.indent(tab.value)
+                                        tab.value = EditorOps.indent(tab.value, tab.language)
                                     }
                                     true
                                 }

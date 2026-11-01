@@ -42,6 +42,14 @@ object SetupScripts {
         "mkdir -p ~/.termux && { grep -qx 'allow-external-apps=true' ~/.termux/termux.properties 2>/dev/null || " +
             "echo 'allow-external-apps=true' >> ~/.termux/termux.properties; } && termux-setup-storage"
 
+    /** Downloads the SuperNova compiler sources into ~/.vsdroid and builds `snc` (log in $LOG). Fails when any step fails. */
+    private const val SNC_BUILD =
+        "D=\"\$HOME/.vsdroid/SuperNova\"; export TMPDIR=\"\${TMPDIR:-\$PREFIX/tmp}\"; mkdir -p \"\$TMPDIR\" \"\$HOME/.vsdroid\"; " +
+            "{ if [ -d \"\$D/.git\" ]; then git -C \"\$D\" pull --ff-only -q; " +
+            "else git clone --depth 1 -q https://github.com/Imbluubyte/SuperNova \"\$D\"; fi; } >> \"\$LOG\" 2>&1 && " +
+            "(cd \"\$D/compiler\" && cargo build --release) >> \"\$LOG\" 2>&1 && " +
+            "cp \"\$D/compiler/target/release/snc\" \"\$PREFIX/bin/snc\" && chmod +x \"\$PREFIX/bin/snc\""
+
     val languages: List<SetupLanguage> = listOf(
         SetupLanguage("python", "Python", listOf("python"), "python"),
         SetupLanguage("node", "JavaScript and TypeScript", listOf("nodejs"), "node"),
@@ -49,6 +57,10 @@ object SetupScripts {
         SetupLanguage(
             "lua", "Lua", listOf("lua54"), "lua",
             after = "command -v lua >/dev/null 2>&1 || ln -sf \"\$PREFIX/bin/lua5.4\" \"\$PREFIX/bin/lua\"",
+        ),
+        SetupLanguage(
+            "supernova", "SuperNova", listOf("rust", "clang", "git"), "snc", note = "Builds the compiler, takes several minutes",
+            after = SNC_BUILD,
         ),
         SetupLanguage("csharp", "C#", listOf("dotnet-sdk-8.0"), "dotnet", note = "Large download"),
         SetupLanguage("java", "Java", listOf("openjdk-17"), "java", note = "Large download"),
@@ -85,7 +97,7 @@ object SetupScripts {
             "(pkg update -y; pkg install -y -o Dpkg::Options::=--force-confold ${packages.joinToString(" ")}) > \"\$LOG\" 2>&1\n" +
             "code=\$?\n" +
             "tail -n 12 \"\$LOG\"\n" +
-            (if (after.isNotEmpty()) "if [ \$code -eq 0 ]; then $after; fi\n" else "") +
+            (if (after.isNotEmpty()) "if [ \$code -eq 0 ]; then $after; code=\$?; [ \$code -eq 0 ] || tail -n 12 \"\$LOG\"; fi\n" else "") +
             "exit \$code\n"
     }
 }

@@ -39,6 +39,7 @@ internal class Lexer(private val s: String, private val lang: Language) {
     private val isJava = id == "java"
     private val isCpp = id == "cpp"
     private val isLua = id == "lua"
+    private val isSn = id == "supernova"
     private val dollarIdent = isJs || isJava || isCs
 
     private var terminated = true
@@ -94,7 +95,7 @@ internal class Lexer(private val s: String, private val lang: Language) {
         }
 
         // Strings and characters
-        if (c == '"' || c == '\'') return string(i, i, "")
+        if (c == '"' || (c == '\'' && !isSn)) return string(i, i, "")
         if (c == '`') {
             if (isJs) return string(i, i, "")
             if (isKt) {
@@ -149,6 +150,7 @@ internal class Lexer(private val s: String, private val lang: Language) {
             val word = s.substring(i, j)
             if (j < n && (s[j] == '"' || s[j] == '\'')) {
                 if (isPy && word.length <= 2 && word.all { it in "rRbBfFuU" }) return string(i, j, word)
+                if (isSn && word == "f" && s[j] == '"') return string(i, j, word)
                 if (isCpp && s[j] == '"' && (word == "R" || word == "uR" || word == "UR" || word == "LR" || word == "u8R")) {
                     return cppRawString(i, j)
                 }
@@ -160,7 +162,7 @@ internal class Lexer(private val s: String, private val lang: Language) {
 
         // Operators and punctuation
         for (op in OPS3) if (s.startsWith(op, i)) return addOp(op, i)
-        for (op in OPS2) if (s.startsWith(op, i)) return addOp(op, i)
+        for (op in OPS2) if (s.startsWith(op, i) && !(isSn && op == "?:")) return addOp(op, i)
         return addOp(c.toString(), i)
     }
 
@@ -243,7 +245,7 @@ internal class Lexer(private val s: String, private val lang: Language) {
         val templ = (isKt && q == '"') || (isJs && q == '`')
         val csInterp = isCs && lower.contains('$')
         val multiline = triple || verbatim || (isJs && q == '`')
-        val interp = lower.contains('f') && isPy || csInterp || templ || id == "kotlin"
+        val interp = lower.contains('f') && (isPy || isSn) || csInterp || templ || id == "kotlin"
 
         var end = -1
         if (triple) {
@@ -398,7 +400,7 @@ internal class Lexer(private val s: String, private val lang: Language) {
     }
 
     companion object {
-        private val OPS3 = arrayOf("**=", "//=", ">>=", "<<=", "...", "!==", "===", "&&=", "||=", "??=", ">>>", "<=>")
+        private val OPS3 = arrayOf("**=", "//=", ">>=", "<<=", "...", "!==", "===", "&&=", "||=", "??=", ">>>", "<=>", "..<")
         private val OPS2 = arrayOf(
             "**", "//", "==", "!=", "<=", ">=", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "->", "=>", "::",
             "&&", "||", "++", "--", "<<", ">>", ":=", "?.", "??", "@=", "<>", "..", "!!", "?:",

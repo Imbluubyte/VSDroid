@@ -159,7 +159,7 @@ private fun GeneralTab(ide: IdeState, close: () -> Unit) {
         Switch(checked = s.signatureHelp, onCheckedChange = { s.signatureHelp = it; s.save() })
     }
     Text(
-        "Works for Python, JavaScript, TypeScript, Java, C#, Kotlin, C++ and Lua. Ctrl+Space suggests, F12 goes to a definition, " +
+        "Works for Python, JavaScript, TypeScript, Java, C#, Kotlin, C++, Lua and SuperNova. Ctrl+Space suggests, F12 goes to a definition, " +
             "Ctrl+I shows quick info, Ctrl+Shift+R renames a symbol.",
         color = Vs.textDim, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp),
     )

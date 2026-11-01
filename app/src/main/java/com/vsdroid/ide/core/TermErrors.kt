@@ -18,6 +18,8 @@ object TermErrors {
     private val NODE_HEAD = Regex("""^((?:/|[A-Za-z]:\\)[^:]+\.(?:js|mjs|cjs|ts)):(\d+)\s*$""")
     private val JAVA_AT = Regex("""^\s*at\s+[\w.$<>]+\((\w+\.(?:java|kt)):(\d+)\)""")
     private val EXC = Regex("""^(?:Exception in thread "[^"]*" )?([\w.$]+(?:Error|Exception)\b.*)$""")
+    private val SN_HEAD = Regex("""^(?:Runtime)?Error:\s*(.*)$""")
+    private val SN_AT = Regex("""^\s*at\s+(.+\.sn):(\d+)(?::(\d+))?\s*$""")
     private val PY_EXC = Regex("""^([A-Za-z_][\w.]*(?:Error|Exception|Exit|Interrupt)\b.*|[A-Za-z_][\w.]*: .+)$""")
 
     /** [resolve] turns a path or bare file name from the output into an absolute project file path, or null when it is not one. */
@@ -83,6 +85,12 @@ object TermErrors {
                     }
                     out.add(TermError(p, m.groupValues[2].toInt(), 1, msg.ifEmpty { "The program failed here" }))
                 }
+            }
+            // SuperNova runtime errors: "RuntimeError: msg" then "  at file.sn:L:C"
+            SN_HEAD.find(l.trim())?.let { h ->
+                val at = lines.getOrNull(i + 1)?.let { SN_AT.find(it) }
+                val p = at?.let { resolve(it.groupValues[1]) }
+                if (at != null && p != null) out.add(TermError(p, at.groupValues[2].toInt(), at.groupValues[3].toIntOrNull() ?: 1, h.groupValues[1].trim().ifEmpty { "Runtime error" }))
             }
             // Runtime stack traces (Node "at f (/path:1:2)", Java "at A.main(A.java:5)"): the first project frame under an exception line.
             if (EXC.matches(l.trim()) && !l.trim().startsWith("at ")) {
